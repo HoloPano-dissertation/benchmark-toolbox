@@ -1,0 +1,28 @@
+experiment_name: shape_chamfer
+seed: 42
+output_dir: ../../artifacts/shape_chamfer
+
+model:
+  type: fixture
+  parameters:
+    prediction_dir: /PATH/TO/Pano3D/data/igibson_bench/pred_total3d_shape
+
+dataset:
+  type: manifest
+  parameters:
+    manifest: /PATH/TO/Pano3D/data/igibson_bench/manifest_shape.jsonl
+
+metrics:
+  - type: mesh_chamfer
+    parameters:
+      iou_threshold: 0.15
+      num_points: 2048
+      seed: 0
+      normalize: canonical   # normalize each mesh independently (center + unit diagonal)
+  - type: mesh_fscore
+    parameters:
+      iou_threshold: 0.15
+      num_points: 2048
+      seed: 0
+      fscore_threshold: 0.1
+      normalize: canonical

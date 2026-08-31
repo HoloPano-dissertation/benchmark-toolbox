@@ -1,0 +1,14 @@
+extends: ../protocols/igibson_pcf.yaml
+
+experiment_name: holopano
+output_dir: ../../artifacts/holopano
+
+model:
+  type: holopano
+  parameters:
+    environment: ../environments/holopano.yaml
+
+dataset:
+  type: igibson
+  parameters:
+    manifest: ../../data/examples/manifest.jsonl

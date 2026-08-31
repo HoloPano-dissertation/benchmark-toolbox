@@ -1,0 +1,62 @@
+method: Pano3D
+resume: False
+finetune: True
+weight: [
+  'out/relation_scene_gcn/21091021124435/model_best.pth',
+  'out/layout_estimation/21022217101943/model_best.pth',
+  'out/mgnet_igibson/26061915050512/model_best.pth',
+]
+seed: 123
+device:
+  use_gpu: True
+  gpu_ids: '0'
+  num_workers: 0
+data:
+  split: demo/input
+  expand_dis: 0.1
+  igibson_obj_dataset: data/igibson_obj
+  g_feature_length: 64
+  height: 512
+  width: 1024
+model:
+  detector:
+    module: Detector2D
+    config: 'COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml'
+    weight: 'out/detector/detector_mask_rcnn/model_final.pth'
+    score_thresh: 0.6
+    min_iou: 0.25
+    real: False
+    pano: True
+    cf_thresh: 0.3
+    nms_thresh: 0.2
+    nms_all_thresh: 0.4
+  layout_estimation:
+    module: HorizonNet
+    loss: HorizonLoss
+    backbone: resnet50
+    use_rnn: True
+  bdb3d_estimation:
+    module: Bdb3DNet
+    loss: JointLoss
+    d_k: 64
+    Nr: 16
+  mesh_reconstruction:
+    module: DensTMNet
+    loss: SVRLoss
+    tmn_subnetworks: 2
+    with_edge_classifier: True
+    face_samples: 1
+train:
+  epochs: 35
+  freeze: ['bdb3d_estimation', 'mesh_reconstruction']
+  batch_size: 16
+val:
+  batch_size: 16
+test:
+  batch_size: 1
+log:
+  vis_step: 1
+  print_step: 10
+  save_mesh: False
+  path: out/pano3d_total3d
+  save_checkpoint: False

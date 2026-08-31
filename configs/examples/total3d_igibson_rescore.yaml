@@ -1,0 +1,14 @@
+extends: ../protocols/igibson_boxes.yaml
+
+experiment_name: total3d_igibson
+output_dir: ../../artifacts/total3d_igibson
+
+model:
+  type: fixture
+  parameters:
+    prediction_dir: /PATH/TO/Pano3D/data/igibson_bench/pred_total3d
+
+dataset:
+  type: manifest
+  parameters:
+    manifest: /PATH/TO/Pano3D/data/igibson_bench/manifest_pred_total3d.jsonl

@@ -1,0 +1,6 @@
+name: echo
+backend: venv
+variant: cpu
+runner:
+  entry: runners/echo_runner.py
+  batch: true

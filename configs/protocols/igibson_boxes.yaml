@@ -1,0 +1,16 @@
+seed: 42
+
+metrics:
+  - type: layout_iou_3d
+  - type: object_map
+    parameters:
+      iou_threshold: 0.15
+  - type: object_map_dataset
+    parameters:
+      iou_threshold: 0.15
+  - type: collision_rate
+  - type: layout_violation_rate
+    parameters:
+      # Hairline wall contact is not a physics failure; only real protrusion counts.
+      tolerance: 0.05
+  - type: layout_penetration

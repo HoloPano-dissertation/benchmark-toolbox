@@ -1,0 +1,20 @@
+seed: 42
+
+metrics:
+  - type: object_map_dataset
+    parameters: &pcf
+      iou_threshold: 0.15
+      classes: [chair, sofa, table, fridge, sink, door, floor_lamp,
+                bottom_cabinet, top_cabinet, sofa_chair, dryer]
+  - type: object_map
+    parameters: *pcf
+  - type: object_map_dataset
+    parameters:
+      <<: *pcf
+      per_class: true
+      name: ap
+  - type: collision_rate
+  - type: layout_violation_rate
+    parameters:
+      tolerance: 0.05
+  - type: layout_penetration

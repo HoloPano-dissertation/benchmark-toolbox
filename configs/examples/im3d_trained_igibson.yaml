@@ -1,0 +1,16 @@
+extends: ../protocols/igibson_boxes.yaml
+
+experiment_name: im3d_trained_igibson_env
+output_dir: ../../artifacts/im3d_trained_igibson_env
+
+model:
+  type: dpc
+  parameters:
+    environment: ../environments/dpc.yaml
+    runner_args: ["--pred-root", "out/pano3d_im3d_trained", "--model", "im3d-pano-trained", "--relation-adjust", "False"]
+    timeout_seconds: 7200
+
+dataset:
+  type: manifest
+  parameters:
+    manifest: /PATH/TO/Pano3D/data/igibson_bench/manifest.jsonl

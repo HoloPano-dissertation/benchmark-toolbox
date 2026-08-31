@@ -1,0 +1,17 @@
+name: HoloPano
+backend: conda
+python: "3.8"
+variant: gpu
+repo:
+  url: https://github.com/<account>/HoloPano.git
+env_file: environment.yaml
+pip:
+  - "detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu101/torch1.7/index.html"
+system: [xvfb, ninja-build, freeglut3-dev, libglew-dev, meshlab]
+checkpoints:
+  - url: "<trained-weights URL>"
+    dest: "out/holopano/model_best.pth"
+runner:
+  entry: runners/holopano_runner.py
+  args: ["--config", "configs/holopano.yaml"]
+  wrapper: ["xvfb-run", "-a", "-s", "-screen 0 1024x768x24"]

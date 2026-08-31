@@ -1,0 +1,35 @@
+name: Pano3D
+backend: conda
+python: "3.8"
+variant: gpu
+repo:
+  url: https://github.com/chengzhag/DeepPanoContext.git
+env_file: environment.yaml
+patches:
+  - { file: environment.yaml, drop: ["mirrors.tuna", "prefix:", "cudatoolkit", "pycocotools==2.0.2"], relax: ["pytorch", "torchvision"] }
+  - { file: environment.yaml, after: "dependencies:", lines: ["  - setuptools<58", "  - wheel<0.38"] }
+pip:
+  - "setuptools<58 wheel<0.38 pip<22"
+  - "pycocotools==2.0.7"
+  - "detectron2 -f https://dl.fbaipublicfiles.com/detectron2/wheels/cu110/torch1.7/index.html"
+  - "ipython opencv-python==4.4.0.46 h5py pickle5 plyfile transforms3d pyglet tensorboardX seaborn scikit-learn py360convert matplotlib_inline gibson2==1.0.1 wandb"
+  - "--upgrade numpy"
+system: [xvfb, ninja-build, freeglut3-dev, libglew-dev, meshlab]
+checkpoints:
+  - url: "https://stduestceducn-my.sharepoint.com/:u:/g/personal/2015010912010_std_uestc_edu_cn/EUbGsq_V5K9Ai7U-MpMBcbsBEgPvl3VtVpsVv1IfJDlY7g?e=YPMQNU&download=1"
+    dest: "dpc_pretrained.zip"
+    unpack: true
+  - url: "https://download.pytorch.org/models/resnet18-5c106cde.pth"
+    dest: "~/.cache/torch/hub/checkpoints/resnet18-5c106cde.pth"
+    sha256: "5c106cde386e87d4033832f2996f5493238eda96ccf559d1d62760c4de0613f8"
+  - url: "https://download.pytorch.org/models/resnet34-333f7ec4.pth"
+    dest: "~/.cache/torch/hub/checkpoints/resnet34-333f7ec4.pth"
+    sha256: "333f7ec4c6338da2cbed37f1fc0445f9624f1355633fa1d7eab79a91084c6cef"
+  - url: "https://download.pytorch.org/models/resnet50-19c8e357.pth"
+    dest: "~/.cache/torch/hub/checkpoints/resnet50-19c8e357.pth"
+    sha256: "19c8e3572231adff6824a2da93fd67b5986919a2e65f8b6007eab4edee220097"
+runner:
+  entry: runners/dpc_runner.py
+  args: ["--config", "configs/pano3d_igibson.yaml"]
+  wrapper: ["xvfb-run", "-a", "-s", "-screen 0 1024x768x24"]
+  batch: true

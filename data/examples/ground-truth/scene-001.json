@@ -1,0 +1,27 @@
+{
+  "layout": {
+    "min_corner": [0.0, 0.0, 0.0],
+    "max_corner": [4.0, 3.0, 5.0]
+  },
+  "objects": [
+    {
+      "object_id": "chair-gt",
+      "label": "chair",
+      "score": 1.0,
+      "bbox": {
+        "min_corner": [1.0, 0.0, 1.0],
+        "max_corner": [2.0, 1.0, 2.0]
+      }
+    },
+    {
+      "object_id": "table-gt",
+      "label": "table",
+      "score": 1.0,
+      "bbox": {
+        "min_corner": [2.5, 0.0, 2.0],
+        "max_corner": [3.5, 1.0, 3.0]
+      }
+    }
+  ],
+  "relations": []
+}

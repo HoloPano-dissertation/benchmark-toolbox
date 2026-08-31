@@ -1,0 +1,31 @@
+{
+  "experiment_name": "smoke",
+  "seed": 42,
+  "output_dir": "../../artifacts/smoke",
+  "model": {
+    "type": "fixture",
+    "parameters": {
+      "prediction_dir": "../../data/examples/predictions"
+    }
+  },
+  "dataset": {
+    "type": "manifest",
+    "parameters": {
+      "manifest": "../../data/examples/manifest.jsonl"
+    }
+  },
+  "metrics": [
+    {
+      "type": "layout_iou_3d"
+    },
+    {
+      "type": "object_map",
+      "parameters": {
+        "iou_threshold": 0.5
+      }
+    },
+    {
+      "type": "collision_rate"
+    }
+  ]
+}

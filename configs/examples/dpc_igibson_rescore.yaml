@@ -1,0 +1,14 @@
+extends: ../protocols/igibson_boxes.yaml
+
+experiment_name: dpc_igibson
+output_dir: ../../artifacts/dpc_igibson
+
+model:
+  type: fixture
+  parameters:
+    prediction_dir: /PATH/TO/Pano3D/data/igibson_bench/pred
+
+dataset:
+  type: manifest
+  parameters:
+    manifest: /PATH/TO/Pano3D/data/igibson_bench/manifest_pred.jsonl

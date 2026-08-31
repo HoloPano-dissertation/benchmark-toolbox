@@ -1,0 +1,14 @@
+extends: ../protocols/igibson_pcf.yaml
+
+experiment_name: holopano_pcf
+output_dir: ../../artifacts/holopano_pcf
+
+model:
+  type: fixture
+  parameters:
+    prediction_dir: /PATH/TO/data/holopano_bench/pred
+
+dataset:
+  type: manifest
+  parameters:
+    manifest: /PATH/TO/data/holopano_bench/manifest.jsonl
