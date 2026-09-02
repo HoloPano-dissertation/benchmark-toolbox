@@ -24,6 +24,10 @@ make smoke    # demo benchmark (no GPU, no models)
 the report to `artifacts/smoke/report.md` (perfect metrics on a fixture scene:
 `layout_iou_3d=1.0`, `object_map=1.0`, `collision_rate=0.0`).
 
+Processed MIDI-3D/3D-FRONT GLB rooms can be converted into equirectangular RGB,
+depth, normal, and instance-segmentation panoramas with the standalone
+[3D-FRONT panorama renderer](tools/3dfront_panorama_renderer/README.md).
+
 Without `make` (standard library only, no install):
 
 ```bash
