@@ -4,11 +4,21 @@ import argparse
 import json
 import math
 import re
+import sys
 from pathlib import Path
 
 import bpy
 import numpy as np
 from mathutils import Vector
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from camera_policy import (
+    POLICY_VERSION,
+    camera_grid,
+    is_structural_file,
+    select_cameras,
+    validate_camera_locations,
+)
 
 
 UUID_SUFFIX = re.compile(
@@ -28,6 +38,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--views", type=int, default=4)
     parser.add_argument("--camera-height", type=float, default=1.6)
     parser.add_argument("--min-clearance", type=float, default=0.25)
+    parser.add_argument(
+        "--allow-relaxed-clearance", action="store_true",
+        help="Explicitly allow smaller clearances; recorded in render metadata.",
+    )
     parser.add_argument("--samples", type=int, default=32)
     return parser.parse_args()
 
@@ -58,7 +72,14 @@ def import_room(room_dir: Path) -> list[bproc.types.MeshObject]:
 
 
 def room_bounds(meshes: list[bproc.types.MeshObject]) -> tuple[np.ndarray, np.ndarray]:
-    corners = np.concatenate([mesh.get_bound_box() for mesh in meshes], axis=0)
+    structural = [
+        mesh
+        for mesh in meshes
+        if is_structural_file(str(mesh.get_cp("source_file")))
+    ]
+    if not structural:
+        raise ValueError("No structural floor/wall/ceil/others GLBs; cannot place cameras safely")
+    corners = np.concatenate([mesh.get_bound_box() for mesh in structural], axis=0)
     return np.min(corners, axis=0), np.max(corners, axis=0)
 
 
@@ -69,70 +90,41 @@ def choose_cameras(
     camera_height: float,
     min_clearance: float,
     views: int,
-) -> list[np.ndarray]:
-    if views < 1:
-        raise ValueError("views must be at least 1")
+    allow_relaxed: bool = False,
+) -> tuple[list[np.ndarray], list[float]]:
     bvh = bproc.object.create_bvh_tree_multi_objects(meshes)
-    z = min(bounds_min[2] + camera_height, bounds_max[2] - 0.2)
-    fractions = (0.5, 0.3, 0.7, 0.15, 0.85)
-    fallback = np.array(
-        [
-            (bounds_min[0] + bounds_max[0]) / 2,
-            (bounds_min[1] + bounds_max[1]) / 2,
-            z,
-        ]
-    )
-    candidates: list[tuple[float, np.ndarray]] = []
-    for x_fraction in fractions:
-        for y_fraction in fractions:
-            candidate = np.array(
-                [
-                    bounds_min[0] + x_fraction * (bounds_max[0] - bounds_min[0]),
-                    bounds_min[1] + y_fraction * (bounds_max[1] - bounds_min[1]),
-                    z,
-                ]
-            )
-            nearest = bvh.find_nearest(Vector(candidate))
-            clearance = float(nearest[3]) if nearest is not None else float("inf")
-            if clearance > min_clearance:
-                candidates.append((clearance, candidate))
-    if not candidates:
-        return [fallback] * views
-
-    candidates.sort(key=lambda item: item[0], reverse=True)
-    selected = [candidates.pop(0)[1]]
-    room_diagonal = max(float(np.linalg.norm(bounds_max[:2] - bounds_min[:2])), 1e-6)
-    while candidates and len(selected) < views:
-        best_index = max(
-            range(len(candidates)),
-            key=lambda index: (
-                min(
-                    np.linalg.norm(candidates[index][1][:2] - point[:2])
-                    for point in selected
-                )
-                / room_diagonal,
-                candidates[index][0],
-            ),
-        )
-        selected.append(candidates.pop(best_index)[1])
-    while len(selected) < views:
-        selected.append(selected[0].copy())
-    return selected
+    candidates = []
+    for candidate in camera_grid(bounds_min, bounds_max, camera_height):
+        nearest = bvh.find_nearest(Vector(candidate))
+        if nearest is None or nearest[3] is None:
+            continue
+        candidates.append((float(nearest[3]), candidate))
+    selected = select_cameras(candidates, views, min_clearance, allow_relaxed)
+    locations = [np.asarray(point) for _, point in selected]
+    validate_camera_locations(locations, bounds_min, bounds_max, views)
+    return locations, [clearance for clearance, _ in selected]
 
 
-def main() -> None:
+def main(metadata_filename="render.json") -> None:
     args = parse_args()
+    if args.width < 1 or args.height < 1 or args.width != 2 * args.height:
+        raise ValueError("Full equirectangular panoramas require positive 2:1 resolution")
+    if args.samples < 1:
+        raise ValueError("samples must be positive")
+    if args.output_dir.exists() and any(args.output_dir.iterdir()):
+        raise FileExistsError("Use an empty output directory; old renders are not overwritten")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     bproc.init()
     meshes = import_room(args.room_dir.resolve())
     bounds_min, bounds_max = room_bounds(meshes)
-    camera_locations = choose_cameras(
+    camera_locations, camera_clearances = choose_cameras(
         bounds_min,
         bounds_max,
         meshes,
         args.camera_height,
         args.min_clearance,
         args.views,
+        args.allow_relaxed_clearance,
     )
 
     bproc.camera.set_resolution(args.width, args.height)
@@ -142,7 +134,6 @@ def main() -> None:
         camera.panorama_type = "EQUIRECTANGULAR"
     else:
         camera.cycles.panorama_type = "EQUIRECTANGULAR"
-    # Local camera +Y becomes world +Z, which keeps the panorama horizon level.
     rotation = np.array([math.pi / 2.0, 0.0, 0.0])
     for camera_location in camera_locations:
         bproc.camera.add_camera_pose(
@@ -178,14 +169,25 @@ def main() -> None:
     )
     data = bproc.renderer.render()
     bproc.writer.write_hdf5(str(args.output_dir), data)
-    (args.output_dir / "render.json").write_text(
+    (args.output_dir / metadata_filename).write_text(
         json.dumps(
             {
-                "format_version": 1,
+                "format_version": 2,
+                "camera_policy_version": POLICY_VERSION,
                 "source": "MIDI-3D/3D-FRONT processed GLB room",
                 "projection": "equirectangular",
                 "room_dir": str(args.room_dir.resolve()),
                 "camera_locations": [location.tolist() for location in camera_locations],
+                "camera_clearances": camera_clearances,
+                "requested_min_clearance": args.min_clearance,
+                "allow_relaxed_clearance": args.allow_relaxed_clearance,
+                "relaxed_camera_count": sum(c < args.min_clearance for c in camera_clearances),
+                "camera_height_requested": args.camera_height,
+                "camera_rotation_euler_xyz": rotation.tolist(),
+                "coordinate_frame": "Blender world XYZ, Z-up",
+                "gltf_to_blender_axes": ["x", "-z", "y"],
+                "metric_scale_certified": False,
+                "bounds_source": "structural GLBs (exact case-sensitive filenames)",
                 "bounds_min": bounds_min.tolist(),
                 "bounds_max": bounds_max.tolist(),
                 "mesh_count": len(meshes),
