@@ -15,7 +15,7 @@ maps to `SceneOutput`, and the metrics are computed under one protocol.
 | echo / fixture | — | — | demo without a model | ✅ for core checks |
 
 All rows are produced and summarized in [results.md](results.md) (+ the Chamfer/F-score
-shape metric); the trained-head weights are in a GitHub Release (see [README](../README.md)).
+shape metric); the trained-head weights are in a GitHub Release (see [README](../README.en.md)).
 
 ---
 

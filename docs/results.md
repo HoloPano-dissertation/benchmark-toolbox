@@ -35,7 +35,7 @@ to agree on all 500 scenes.
 - **Weights:** DPC and Im3D-Pano (ablation) — authors'; Im3D-Pano (trained) and Total3D-Pano — **trained by us** (the shape head).
 - **Relation/GCN:** on for DPC; for Im3D-Pano (ablation) the optimization is off but **the GCN is present**; for Im3D-Pano (trained) and Total3D-Pano **the GCN is absent entirely**.
 
-\* For DPC@100 these two metrics are **deflated** (87 scenes with degenerate boxes are
+\* For DPC@100 these two metrics are **deflated** (86 scenes with degenerate boxes are
 skipped by the counter); the honest object↔layout numbers for DPC are in the DPC@20
 column (0 degenerate scenes).
 
@@ -75,7 +75,7 @@ column (0 degenerate scenes).
 
    | optimize_steps | degenerate layouts (of 500) | object_map_dataset |
    |---:|---:|---:|
-   | 100 (release) | **87** | 0.292 |
+   | 100 (release) | **86** | 0.292 |
    | 20 | **0** | 0.356 |
 
    The instability **nullifies the method's own gain** (0.292 ≈ the no-relation 0.293);
@@ -101,8 +101,8 @@ diagonal); the protocol and commands are in [shape_metric.md](shape_metric.md).
 **MGN is significantly more accurate than LDIF on shape.** Since the methods share boxes
 (only the head differs), the comparison is **paired** per scene (much lower variance than
 independent CIs): Chamfer(MGN−LDIF) = **−0.00047**, 95% CI **[−0.00070, −0.00023]** (CI<0;
-MGN better in 304/462=66% of scenes); F-score(MGN−LDIF) = **+0.0086**, 95% CI **[+0.0044,
-+0.0130]** (CI>0). Both CIs **exclude 0** → the difference is significant. **This is the
+MGN better in 304/462=66% of scenes); F-score(MGN−LDIF) = **+0.0086**, 95% CI **[+0.0042,
++0.0128]** (CI>0). Both CIs **exclude 0** → the difference is significant. **This is the
 discriminator that box metrics cannot provide:** the explicit-mesh head (MGN) reconstructs
 object shape more accurately than the implicit one (LDIF) in a controlled setup (shared
 trunk, no GCN). Export of canonical predicted meshes (patch `DPC_PATCH_EXPORT_OBJ_MESH`) +

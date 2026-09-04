@@ -8,6 +8,14 @@ env_file: environment.yaml
 patches:
   - { file: environment.yaml, drop: ["mirrors.tuna", "prefix:", "cudatoolkit", "pycocotools==2.0.2"], relax: ["pytorch", "torchvision"] }
   - { file: environment.yaml, after: "dependencies:", lines: ["  - setuptools<58", "  - wheel<0.38"] }
+  - file: configs/data_config.py
+    after: "IG59CLASSES = IG56CLASSES + ['walls', 'floors', 'ceilings']"
+    lines:
+      - ""
+      - "_pano3d_classes = os.environ.get('PANO3D_CLASSES')"
+      - "if _pano3d_classes:"
+      - "    IG56CLASSES = _pano3d_classes.split(',')"
+      - "    IG59CLASSES = list(IG56CLASSES) + ['walls', 'floors', 'ceilings']"
 pip:
   - "setuptools<58 wheel<0.38 pip<22"
   - "pycocotools==2.0.7"

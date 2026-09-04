@@ -1,0 +1,309 @@
+{
+  "policy_id": "excluded-rooms",
+  "user_decision": "Exclude these rooms from train, validation, test and published benchmark; do not reconstruct geometry or delete source assets. The floor-area bound of 1 m^2 is a chosen threshold, not a property of the source.",
+  "expected_original_rooms": 997,
+  "expected_retained_rooms": 952,
+  "views_per_room": 4,
+  "evidence": "Geometry preflight for the first sixteen; metric scaling and camera planning of the shell-clipped contour for the rest. Reasons are reproduced in state/metric_scale.json of an export.",
+  "rooms": [
+    {
+      "room_id": "f65431c6-3731-45bf-b10e-e3b1a37a87b6/LivingDiningRoom-14452",
+      "split": "test",
+      "house_id": "f65431c6-3731-45bf-b10e-e3b1a37a87b6",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "f7f1f448-8a7e-4b56-935b-83ab1d524a71/ElderlyRoom-17739",
+      "split": "test",
+      "house_id": "f7f1f448-8a7e-4b56-935b-83ab1d524a71",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e111dcdb-094b-4adb-bcce-1db491755d7b/DiningRoom-69757",
+      "split": "train",
+      "house_id": "e111dcdb-094b-4adb-bcce-1db491755d7b",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e1b50a25-5422-4307-8b9c-24ad0bb8d8bc/MasterBedroom-24635",
+      "split": "train",
+      "house_id": "e1b50a25-5422-4307-8b9c-24ad0bb8d8bc",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e4aaffdb-1a09-4e51-95e8-7918f3a04728/DiningRoom-9982",
+      "split": "train",
+      "house_id": "e4aaffdb-1a09-4e51-95e8-7918f3a04728",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e5808070-9156-45fa-809f-ee5e05312282/OtherRoom-31122",
+      "split": "train",
+      "house_id": "e5808070-9156-45fa-809f-ee5e05312282",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e9b1fe99-242b-46e5-85c5-59028015310d/LivingRoom-11414",
+      "split": "train",
+      "house_id": "e9b1fe99-242b-46e5-85c5-59028015310d",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "efae3b03-c5e7-42b6-8a1d-74a60df65af1/Bedroom-73741",
+      "split": "train",
+      "house_id": "efae3b03-c5e7-42b6-8a1d-74a60df65af1",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "efae3b03-c5e7-42b6-8a1d-74a60df65af1/Library-74353",
+      "split": "train",
+      "house_id": "efae3b03-c5e7-42b6-8a1d-74a60df65af1",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "f30624fe-62c8-4de2-bf4a-36977fa5f14e/LivingRoom-370644",
+      "split": "train",
+      "house_id": "f30624fe-62c8-4de2-bf4a-36977fa5f14e",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "fc867413-7da3-420a-83a4-a292b2114b40/LivingRoom-111833",
+      "split": "train",
+      "house_id": "fc867413-7da3-420a-83a4-a292b2114b40",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "fcd79353-e14c-489f-a202-55565827f205/DiningRoom-208460",
+      "split": "train",
+      "house_id": "fcd79353-e14c-489f-a202-55565827f205",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "ff79b941-b656-41b9-a740-5647b52b2605/DiningRoom-68889",
+      "split": "train",
+      "house_id": "ff79b941-b656-41b9-a740-5647b52b2605",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "e1db6b8d-a61e-42fa-afd7-5e55bcf305c4/DiningRoom-1379",
+      "split": "val",
+      "house_id": "e1db6b8d-a61e-42fa-afd7-5e55bcf305c4",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "f0203867-54d6-46fd-ba3c-f1519e42b9b5/Library-297",
+      "split": "val",
+      "house_id": "f0203867-54d6-46fd-ba3c-f1519e42b9b5",
+      "reason": "ValueError: No matching ceiling patch; explicit reconstruction is required"
+    },
+    {
+      "room_id": "fab6bf6e-068a-4de6-8a5b-6b5e06046fdb/SecondBedroom-458",
+      "split": "val",
+      "house_id": "fab6bf6e-068a-4de6-8a5b-6b5e06046fdb",
+      "reason": "ValueError: Dominant floor/ceiling planes disagree spatially"
+    },
+    {
+      "room_id": "e2d58ac7-72de-4bc9-9440-ff8fad432bfe/Library-31681",
+      "split": "train",
+      "house_id": "e2d58ac7-72de-4bc9-9440-ff8fad432bfe",
+      "reason": "Recovered contour is 0.052 of the room shell; the contour collapsed",
+      "evidence": "Contour-against-shell and metric plausibility checks of the scale report"
+    },
+    {
+      "room_id": "e836a041-71fd-4fd4-9aa5-84cbc37b69dd/SecondBedroom-2113",
+      "split": "val",
+      "house_id": "e836a041-71fd-4fd4-9aa5-84cbc37b69dd",
+      "reason": "Recovered contour is 0.088 of the room shell; the contour collapsed",
+      "evidence": "Contour-against-shell and metric plausibility checks of the scale report"
+    },
+    {
+      "room_id": "f6a4423f-ea1c-4bfc-b22a-2ffa146a940f/Hallway-20094",
+      "split": "val",
+      "house_id": "f6a4423f-ea1c-4bfc-b22a-2ffa146a940f",
+      "reason": "Floor area 0.73 m^2 after metric scaling; not a room",
+      "evidence": "Contour-against-shell and metric plausibility checks of the scale report"
+    },
+    {
+      "room_id": "f66b2c1a-997a-48f3-bde5-4d50bbd87b15/SecondBedroom-1237",
+      "split": "test",
+      "house_id": "f66b2c1a-997a-48f3-bde5-4d50bbd87b15",
+      "reason": "Recovered contour is 0.062 of the room shell; the contour collapsed",
+      "evidence": "Contour-against-shell and metric plausibility checks of the scale report"
+    },
+    {
+      "room_id": "fa61b971-a2a1-4b3b-8ba4-1725c77d9be2/Hallway-12261",
+      "split": "train",
+      "house_id": "fa61b971-a2a1-4b3b-8ba4-1725c77d9be2",
+      "reason": "No camera pose meets the clearance once the contour is clipped to the room shell; the room itself is about 0.8 m^2",
+      "evidence": "Camera planning on the shell-clipped contour finds no usable pose"
+    },
+    {
+      "room_id": "f877d2a1-678f-49a0-a90e-e99ff27134c7/DiningRoom-13034",
+      "split": "train",
+      "house_id": "f877d2a1-678f-49a0-a90e-e99ff27134c7",
+      "reason": "Four camera poses cannot be separated once the contour is clipped to the room shell; the room itself is about 2.7 m^2",
+      "evidence": "Camera planning on the shell-clipped contour finds no usable pose"
+    },
+    {
+      "room_id": "def783a7-8d08-470d-b936-f66d6fbc69a2/StorageRoom-1975",
+      "split": "train",
+      "house_id": "def783a7-8d08-470d-b936-f66d6fbc69a2",
+      "reason": "Floor area 0.97 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "e08e8941-25c9-4637-b7da-05bc2cd1413a/CloakRoom-88556",
+      "split": "train",
+      "house_id": "e08e8941-25c9-4637-b7da-05bc2cd1413a",
+      "reason": "Floor area 0.19 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "e51fc210-341a-4743-b11a-d70d839cf433/Aisle-27483",
+      "split": "train",
+      "house_id": "e51fc210-341a-4743-b11a-d70d839cf433",
+      "reason": "Floor area 0.98 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "e9ebe917-5812-429a-9154-913dcacb49ff/Hallway-33228",
+      "split": "train",
+      "house_id": "e9ebe917-5812-429a-9154-913dcacb49ff",
+      "reason": "Floor area 0.45 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "ee7fd1ac-6036-4ee6-96a3-f1ddf9083fdf/Lounge-309778",
+      "split": "test",
+      "house_id": "ee7fd1ac-6036-4ee6-96a3-f1ddf9083fdf",
+      "reason": "Floor area 0.90 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "f3cfad69-28ff-4db2-ab70-4cc7f6909985/DiningRoom-39824",
+      "split": "test",
+      "house_id": "f3cfad69-28ff-4db2-ab70-4cc7f6909985",
+      "reason": "Floor area 0.50 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "f9b7f141-b314-441a-8d8d-ba7a0227a483/Aisle-8224",
+      "split": "test",
+      "house_id": "f9b7f141-b314-441a-8d8d-ba7a0227a483",
+      "reason": "Floor area 0.88 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "fc182961-7517-4d1d-9969-f9dd7af6668c/LivingDiningRoom-28726",
+      "split": "train",
+      "house_id": "fc182961-7517-4d1d-9969-f9dd7af6668c",
+      "reason": "Floor area 0.49 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "fcbed989-1248-4c5d-824d-dd40671ed6ca/OtherRoom-6103",
+      "split": "train",
+      "house_id": "fcbed989-1248-4c5d-824d-dd40671ed6ca",
+      "reason": "Floor area 0.23 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "ff7b42d9-0e58-4847-8d47-f793a11cd3bd/Hallway-83453",
+      "split": "train",
+      "house_id": "ff7b42d9-0e58-4847-8d47-f793a11cd3bd",
+      "reason": "Floor area 0.93 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "ffa406e2-6e48-4c38-8072-cffca7b2633b/Hallway-2369",
+      "split": "train",
+      "house_id": "ffa406e2-6e48-4c38-8072-cffca7b2633b",
+      "reason": "Floor area 0.85 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "ffa406e2-6e48-4c38-8072-cffca7b2633b/StorageRoom-2326",
+      "split": "train",
+      "house_id": "ffa406e2-6e48-4c38-8072-cffca7b2633b",
+      "reason": "Floor area 0.95 m^2 once the contour is clipped to the packaged room shell; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the contour matches the room shell within 8%, so the size is the room's own"
+    },
+    {
+      "room_id": "ea053728-6c89-40eb-afd1-703eb4856b99/SecondBedroom-44341",
+      "split": "train",
+      "house_id": "ea053728-6c89-40eb-afd1-703eb4856b99",
+      "reason": "Floor area 0.78 m^2 under the exact per-room scale of the original 3D-FRONT; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the scale comes from the real sizes of two furniture models of the room"
+    },
+    {
+      "room_id": "fb26468f-a7d0-4450-9e88-424004e98d86/Bedroom-4326",
+      "split": "train",
+      "house_id": "fb26468f-a7d0-4450-9e88-424004e98d86",
+      "reason": "Floor area 0.99 m^2 under the exact per-room scale of the original 3D-FRONT; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the scale comes from the real sizes of two furniture models of the room"
+    },
+    {
+      "room_id": "fcc5e685-aab1-42bd-aaa7-9167d58f63d6/OtherRoom-32224",
+      "split": "train",
+      "house_id": "fcc5e685-aab1-42bd-aaa7-9167d58f63d6",
+      "reason": "Floor area 0.75 m^2 under the exact per-room scale of the original 3D-FRONT; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the scale comes from the real sizes of two furniture models of the room"
+    },
+    {
+      "room_id": "e60add0b-e098-43fb-8555-704624ea66a6/Courtyard-8727",
+      "split": "test",
+      "house_id": "e60add0b-e098-43fb-8555-704624ea66a6",
+      "reason": "Floor area 0.87 m^2 under the exact per-room scale of the original 3D-FRONT; too small for a panorama of the room",
+      "evidence": "Metric plausibility check of the scale report; the scale comes from the real sizes of two furniture models of the room"
+    },
+    {
+      "room_id": "df17ede9-742d-4283-b77e-8482e260c71e/Aisle-15435",
+      "split": "test",
+      "house_id": "df17ede9-742d-4283-b77e-8482e260c71e",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "e44d23d0-b6ee-40bf-ab2b-7dded90cf45b/DiningRoom-2978",
+      "split": "train",
+      "house_id": "e44d23d0-b6ee-40bf-ab2b-7dded90cf45b",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "e51a130c-ceed-40bf-830a-ca2b1f956e8a/SecondBedroom-11377",
+      "split": "train",
+      "house_id": "e51a130c-ceed-40bf-830a-ca2b1f956e8a",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "e811892d-5755-489f-9815-a7b996da5c58/KidsRoom-4123",
+      "split": "train",
+      "house_id": "e811892d-5755-489f-9815-a7b996da5c58",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "f32ae7af-2144-411e-b8f4-d83da5a4f44a/CloakRoom-24488",
+      "split": "train",
+      "house_id": "f32ae7af-2144-411e-b8f4-d83da5a4f44a",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "fb07e14f-d920-465a-be42-f1f37ce8c0c8/Aisle-1592",
+      "split": "test",
+      "house_id": "fb07e14f-d920-465a-be42-f1f37ce8c0c8",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    },
+    {
+      "room_id": "fb6467c7-66a2-4680-bed9-dbf541b760ff/CloakRoom-3081",
+      "split": "train",
+      "house_id": "fb6467c7-66a2-4680-bed9-dbf541b760ff",
+      "reason": "The furniture of the room does not agree on a single metric scale (mean deviation above 15%), so the room cannot be measured",
+      "evidence": "Scale report built from the original 3D-FRONT: the real sizes of the models, corrected by the per-instance stretch of the scene"
+    }
+  ]
+}

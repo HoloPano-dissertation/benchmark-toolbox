@@ -1,0 +1,59 @@
+{
+  "purpose": "Control row: restrict the metrics of both datasets to categories that mean the same thing in each vocabulary, the way the published comparison already does.",
+  "target_vocabulary": "IG56CLASSES of the DeepPanoContext release",
+  "confident": {
+    "bed/king-size bed": "bed",
+    "bed/single bed": "bed",
+    "bed/crib": "crib",
+    "chair/chair": "chair",
+    "table/table": "table",
+    "table/dining table - square": "table",
+    "table/coffee table - rectangular": "coffee_table",
+    "table/console table": "console_table",
+    "cabinet/floor-based cabinet": "bottom_cabinet",
+    "lighting/floor lamp": "floor_lamp",
+    "lighting/desk lamp": "table_lamp",
+    "shelf/book shelf": "shelf",
+    "shelf/decorative shelf": "shelf",
+    "plants/plants - on top of others": "plant",
+    "mirror/floor-based mirror": "mirror",
+    "appliance/refrigerator": "fridge",
+    "sofa/single seat sofa": "sofa",
+    "sofa/ multi seat sofa": "sofa",
+    "sofa/double seat sofa": "sofa",
+    "sofa/type L sofa": "sofa"
+  },
+  "debatable": {
+    "chair/armchair": "sofa_chair",
+    "sofa/lounge chair": "sofa_chair",
+    "chair/bar chair": "stool",
+    "sofa/ottoman": "stool",
+    "storage unit/armoire": "top_cabinet",
+    "storage unit/dresser": "chest",
+    "cabinet/hutch&buffet": "bottom_cabinet",
+    "cabinet/floor-based kitchen cabinet": "bottom_cabinet",
+    "kitchen cabinet/cbnt drawer": "bottom_cabinet"
+  },
+  "no_counterpart": [
+    "table/night table",
+    "table/side table",
+    "lighting/pendant light",
+    "lighting/ceiling light",
+    "media unit/floor-based media unit",
+    "accessory/accessory - on top of others",
+    "accessory/accessory - floor-based",
+    "accessory/pillow",
+    "art/art - wall-attached",
+    "recreation/musical instrument",
+    "electronics/air-conditioner - floor-based",
+    "build element/background wall",
+    "build element/air-conditioning vent",
+    "build element/floor drain",
+    "200 - on the floor"
+  ],
+  "notes": {
+    "confident": "One-to-one in meaning; safe for a comparable row.",
+    "debatable": "Defensible either way; keep out of the control row unless the choice is stated.",
+    "no_counterpart": "Present in 3D-FRONT, absent from the iGibson vocabulary, or the reverse. iGibson additionally carries bathroom and kitchen appliances that 3D-FRONT rooms do not contain at all."
+  }
+}

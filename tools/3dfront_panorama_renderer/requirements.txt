@@ -1,3 +1,4 @@
 blenderproc==2.8.0
 h5py>=3.10
 Pillow>=10
+shapely>=2,<3

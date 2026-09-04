@@ -1,15 +1,18 @@
-"""Deterministic, Blender-independent camera selection and coordinate checks."""
-
 import math
 from pathlib import Path
 
-
-POLICY_VERSION = "structural-distinct-v4"
+POLICY_VERSION = "shell-clipped-off-furniture"
 STRUCTURAL_STEMS = frozenset({"ceil", "floor", "wall", "others"})
 
 
+def camera_clip_planes(room_height, clearance):
+    if not all(math.isfinite(v) and v > 0 for v in (room_height, clearance)):
+        raise ValueError("Clipping requires positive finite room height and clearance")
+    near = min(room_height * 1e-4, clearance * 0.01)
+    return near, max(room_height * 100, near * 1000)
+
+
 def is_structural_file(filename):
-    # Case matters: `others.glb` is structural, `Others_UUID_1.glb` is furniture.
     return Path(filename).stem in STRUCTURAL_STEMS
 
 
@@ -38,7 +41,6 @@ def camera_grid(lower, upper, requested_height):
 
 
 def select_cameras(candidates, views, min_clearance, allow_relaxed=False):
-    """Return (clearance, XYZ) pairs; never pad the result with duplicate poses."""
     if not isinstance(views, int) or views < 1:
         raise ValueError("views must be a positive integer")
     if not math.isfinite(min_clearance) or min_clearance <= 0:
@@ -62,7 +64,6 @@ def select_cameras(candidates, views, min_clearance, allow_relaxed=False):
                 f"{min_clearance}; requested {views}. Reduce --views or "
                 "--min-clearance, or explicitly use --allow-relaxed-clearance."
             )
-        # Relax only as much as necessary, choosing the safest remaining points.
         rejected = [item for item in ranked if item[0] < min_clearance]
         pool.extend(rejected[:views - len(pool)])
     if len(pool) < views:
@@ -93,3 +94,71 @@ def validate_camera_locations(locations, lower, upper, views):
         if not all(lo - 1e-7 <= v <= hi + 1e-7
                    for v, lo, hi in zip(point, lower, upper)):
             raise ValueError("Camera is outside the structural room bounds")
+
+
+STANDABLE_HEIGHT_FRACTION = 0.1
+
+
+def stands_on_furniture(candidate, object_boxes, floor_z, room_height,
+                        standable_fraction=STANDABLE_HEIGHT_FRACTION):
+    if not math.isfinite(room_height) or room_height <= 0:
+        raise ValueError("Room height must be finite and positive")
+    ceiling_of_standable = floor_z + room_height * standable_fraction
+    x, y = float(candidate[0]), float(candidate[1])
+    for lower, upper in object_boxes:
+        if upper[2] <= ceiling_of_standable:
+            continue
+        if lower[0] <= x <= upper[0] and lower[1] <= y <= upper[1]:
+            return True
+    return False
+
+
+def with_furniture_fallback(candidates, on_furniture, views):
+    if views <= 0:
+        raise ValueError("views must be positive")
+    if len(candidates) >= views or not on_furniture:
+        return candidates, False
+    return list(candidates) + list(on_furniture), True
+
+
+GRID_STEPS = 31
+GRID_MARGIN = 0.02
+SEPARATION_FRACTION = 0.025
+
+
+def min_clearance_for(room_height):
+    return min(0.1, 0.04*room_height)
+
+
+def eye_height(floor_z, room_height, camera_height, height_fraction):
+    if not 0.2 <= height_fraction <= 0.8:
+        raise ValueError("camera-height-fraction must be between 0.2 and 0.8")
+    if camera_height <= 0 or not math.isfinite(camera_height):
+        raise ValueError("camera-height must be positive and finite")
+    return floor_z + min(camera_height, height_fraction*room_height)
+
+
+def candidate_grid(bounds, eye_z, steps=GRID_STEPS, margin=GRID_MARGIN):
+    x0, y0, x1, y1 = bounds
+    fractions = [margin + (1-2*margin)*index/(steps-1) for index in range(steps)]
+    return [(x0+x*(x1-x0), y0+y*(y1-y0), eye_z) for x in fractions for y in fractions]
+
+
+def choose_from_candidates(candidates, on_furniture, views, min_clearance,
+                           allow_relaxed=False):
+    candidates, used_fallback = with_furniture_fallback(candidates, on_furniture, views)
+    if candidates:
+        preferred_clearance = max(min_clearance, max(c for c, _ in candidates)*0.5)
+        preferred = [item for item in candidates if item[0] >= preferred_clearance]
+        if len(preferred) >= views:
+            candidates = preferred
+    return select_cameras(candidates, views, min_clearance, allow_relaxed), used_fallback
+
+
+def poses_separated(locations, room_height, fraction=SEPARATION_FRACTION):
+    for index, first in enumerate(locations):
+        for second in locations[index+1:]:
+            gap = math.hypot(first[0]-second[0], first[1]-second[1])
+            if gap < room_height*fraction:
+                return False
+    return True

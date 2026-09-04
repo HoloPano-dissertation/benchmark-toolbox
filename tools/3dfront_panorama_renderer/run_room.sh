@@ -11,6 +11,8 @@ ROOM_DIR="$1"
 OUTPUT_DIR="$2"
 shift 2
 
+export GIT_PYTHON_REFRESH="${GIT_PYTHON_REFRESH:-quiet}"
+
 BLENDERPROC_BIN="${BLENDERPROC_BIN:-blenderproc}"
 cleanup_temp=true
 if [[ -n "${BLENDERPROC_TEMP_DIR:-}" ]]; then
