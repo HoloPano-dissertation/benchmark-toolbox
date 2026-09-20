@@ -27,6 +27,22 @@ def test_frozen_split_is_house_disjoint_and_excludes_approved_rooms():
     assert not {r["room_id"] for r in rows} & {r["room_id"] for r in excluded}
 
 
+def test_exclusions_need_no_split_label(tmp_path, monkeypatch):
+    import prepare
+    splits = tmp_path / "splits"
+    splits.mkdir()
+    for name, room_id in (("train", "h1/Bedroom-1"), ("val", "h2/Bedroom-2"),
+                          ("test", "h3/Bedroom-3")):
+        (splits / (name + ".txt")).write_text(room_id + "\n", encoding="utf-8")
+    (splits / "excluded_rooms.json").write_text(json.dumps({
+        "expected_retained_rooms": 3,
+        "rooms": [{"room_id": "h4/Bedroom-4", "house_id": "h4", "split": "excluded",
+                   "reason": "the contour collapsed for this room"}]}), encoding="utf-8")
+    monkeypatch.setattr(prepare, "HERE", tmp_path)
+    assert [row["room_id"] for row in prepare.frozen_rooms()] == [
+        "h3/Bedroom-3", "h1/Bedroom-1", "h2/Bedroom-2"]
+
+
 def test_initialization_does_not_create_partial_experiment_with_missing_source(tmp_path):
     from prepare import initialize
     root = tmp_path / "new-experiment"

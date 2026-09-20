@@ -43,6 +43,18 @@ def parse_args() -> argparse.Namespace:
         description="Render one directory of per-object GLB files into panoramas."
     )
     parser.add_argument("room_dir", type=Path)
+    parser.add_argument("--ambient", type=float, default=0.8,
+                        help="Strength of the uniform world light. Raising it fills the "
+                             "recesses a bare lamp cannot reach, such as the cove above "
+                             "a dropped ceiling")
+    parser.add_argument("--light-temperature", default="0",
+                        help="Colour temperature of the room lamps in kelvin, 0 for the "
+                             "white Blender uses by default. A range such as 2700-5000 "
+                             "gives each room its own, picked from its name so that the "
+                             "same room always gets the same lamps")
+    parser.add_argument("--architecture", type=Path,
+                        help="Directory with the room architecture rebuilt from the "
+                             "original 3D-FRONT; loaded beside the furniture")
     parser.add_argument("output_dir", type=Path)
     parser.add_argument("--width", type=int, default=1024)
     parser.add_argument("--height", type=int, default=512)
@@ -66,11 +78,58 @@ def source_label(path: Path) -> str:
     return path.stem[: match.start()] if match else path.stem
 
 
-def import_room(room_dir: Path) -> list[bproc.types.MeshObject]:
+def room_temperature(setting, room_name):
+    text = str(setting or "0").strip()
+    if "-" not in text:
+        return float(text)
+    low, high = (float(part) for part in text.split("-", 1))
+    seed = int(hashlib.sha256(room_name.encode("utf-8")).hexdigest()[:8], 16)
+    return low + (high-low) * (seed % 10_000) / 9_999.0
+
+
+def blackbody(kelvin):
+    temperature = max(1000.0, min(float(kelvin), 40000.0)) / 100.0
+    if temperature <= 66:
+        red = 255.0
+        green = 99.4708025861*math.log(temperature) - 161.1195681661
+    else:
+        red = 329.698727446*((temperature-60) ** -0.1332047592)
+        green = 288.1221695283*((temperature-60) ** -0.0755148492)
+    if temperature >= 66:
+        blue = 255.0
+    elif temperature <= 19:
+        blue = 0.0
+    else:
+        blue = 138.5177312231*math.log(temperature-10) - 305.0447927307
+    return [max(0.0, min(channel, 255.0))/255.0 for channel in (red, green, blue)]
+
+
+def import_architecture(directory: Path) -> list[bproc.types.MeshObject]:
+    meshes: list[bproc.types.MeshObject] = []
+    for path in sorted(directory.glob("*.obj")):
+        previous = set(bpy.data.objects)
+        bpy.ops.wm.obj_import(filepath=str(path), forward_axis="Y", up_axis="Z")
+        for obj in set(bpy.data.objects) - previous:
+            if obj.type != "MESH":
+                continue
+            obj["source_label"] = obj.name.split("_")[0].split(".")[0]
+            obj["source_file"] = path.name
+            meshes.append(bproc.types.MeshObject(obj))
+    if not meshes:
+        raise FileNotFoundError(f"No importable OBJ meshes in {directory}")
+    return meshes
+
+
+STRUCTURAL = ("wall", "floor", "ceil", "others")
+
+
+def import_room(room_dir: Path, skip_structural: bool = False) -> list[bproc.types.MeshObject]:
     if not room_dir.is_dir():
         raise NotADirectoryError(room_dir)
     meshes: list[bproc.types.MeshObject] = []
     for glb_path in sorted(room_dir.glob("*.glb")):
+        if skip_structural and glb_path.stem in STRUCTURAL:
+            continue
         previous = set(bpy.data.objects)
         bpy.ops.import_scene.gltf(filepath=str(glb_path))
         label = source_label(glb_path)
@@ -140,11 +199,8 @@ def choose_cameras(
         nearest = bvh.find_nearest(Vector(candidate))
         if nearest is None or nearest[3] is None:
             continue
-        # Keep the camera away from the true contour as well as triangle surfaces.
         accepted = on_furniture if standing else candidates
         accepted.append((min(float(nearest[3]), float(polygon.boundary.distance(point))), candidate))
-    # Keep diversity within the reasonably open part of the room: choosing the
-    # farthest point from the first camera over the entire grid hugs the walls.
     try:
         selected, used_furniture_fallback = choose_from_candidates(
             candidates, on_furniture, views, min_clearance, allow_relaxed)
@@ -170,12 +226,15 @@ def main(metadata_filename="render.json") -> None:
         raise FileExistsError("Use an empty output directory; old renders are not overwritten")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     bproc.init()
-    meshes = import_room(args.room_dir.resolve())
+    meshes = import_room(args.room_dir.resolve(), skip_structural=bool(args.architecture))
+    if args.architecture:
+        meshes += import_architecture(args.architecture.resolve())
     if args.layout_json:
         layout = json.loads(args.layout_json.read_text())
         layout = layout.get("layout", layout)
     else:
-        layout = recover_layout(args.room_dir.resolve())
+        layout = recover_layout(args.room_dir.resolve(),
+                                args.architecture.resolve() if args.architecture else None)
     bounds_min, bounds_max = np.asarray(layout["bounds_min"]), np.asarray(layout["bounds_max"])
     camera_locations, camera_clearances, used_furniture_fallback = choose_cameras(
         bounds_min,
@@ -205,14 +264,18 @@ def main(metadata_filename="render.json") -> None:
         )
 
     room_height = bounds_max[2]-bounds_min[2]
+    kelvin = room_temperature(args.light_temperature, args.room_dir.name)
+    lamp_colour = blackbody(kelvin) if kelvin else None
     light_locations = [[p[0], p[1], p[2]+0.5*(bounds_max[2]-p[2])] for p in camera_locations]
     for location in light_locations:
         light = bproc.types.Light()
         light.set_location(location)
         light.set_energy(100.0*room_height**2 / len(light_locations))
         light.set_radius(0.1*room_height)
+        if lamp_colour is not None:
+            light.set_color(lamp_colour)
 
-    bproc.renderer.set_world_background([0.04, 0.04, 0.04], strength=0.8)
+    bproc.renderer.set_world_background([0.04, 0.04, 0.04], strength=args.ambient)
     bproc.renderer.set_render_devices(desired_gpu_device_type=["OPTIX", "CUDA"])
     bproc.renderer.set_max_amount_of_samples(args.samples)
     bproc.renderer.set_noise_threshold(0.05)

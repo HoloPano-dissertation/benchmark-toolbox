@@ -10,7 +10,7 @@ import numpy as np
 from shapely.geometry import Point, box, mapping
 from shapely import set_precision
 
-from glb_geometry import glb_triangles, glb_bounds, floor_footprint
+from glb_geometry import glb_triangles, glb_bounds, obj_triangles, floor_footprint
 
 
 SHELL_MARGIN = 0.02
@@ -43,14 +43,17 @@ def clip_patches_to_shell(patches, shell):
     return kept
 
 
-def structural_planes(room_dir):
-    """Large horizontal patches; a file called ceil.glb may contain an entire room."""
+def structural_planes(room_dir, architecture=None):
     room = Path(room_dir)
     pieces, source_ids, names = [], [], []
-    for stem in ("floor", "ceil", "wall", "others"):
-        path = room / f"{stem}.glb"
+    sources = [(p, obj_triangles) for p in sorted(Path(architecture).glob("*.obj"))] \
+        if architecture is not None else \
+        [(room / f"{stem}.glb", glb_triangles) for stem in ("floor", "ceil", "wall", "others")]
+    for path, reader in sources:
         if path.is_file():
-            triangles = glb_triangles(path)
+            triangles = reader(path)
+            if not len(triangles):
+                continue
             pieces.append(triangles)
             source_ids.extend([len(names)] * len(triangles))
             names.append(path.name)
@@ -94,9 +97,9 @@ def structural_planes(room_dir):
     return patches, triangles
 
 
-def recover_layout(room_dir):
-    patches, triangles = structural_planes(room_dir)
-    shell = room_shell_footprint(room_dir)
+def recover_layout(room_dir, architecture=None):
+    patches, triangles = structural_planes(room_dir, architecture)
+    shell = room_shell_footprint(room_dir) if architecture is None else None
     if shell is not None:
         clipped = clip_patches_to_shell(patches, shell)
         if clipped:
@@ -120,20 +123,13 @@ def recover_layout(room_dir):
     floor = min(floor_options, key=lambda p: p["z"])
     furniture_tops = [hi[2] for path, (lo, hi) in zip(object_paths, boxes)
                       if not path.name.startswith("Lighting_")]
-    # Wide shelves/steps in others.glb can resemble a low suspended ceiling.
-    # A ceiling below the typical furniture top cannot enclose that furniture.
     minimum_ceiling_z = max(floor["z"]+0.2*scale,
                            float(np.median(furniture_tops)) if furniture_tops else floor["z"])
     ceiling_options = [p for p in near if p["facing"] == "down" and p["z"] > minimum_ceiling_z]
-    # Require spatial agreement, not just large area: unrelated neighboring
-    # ceilings can be present in the same structural GLB.
     ceiling_options = [p for p in ceiling_options
                        if p["polygon"].intersection(floor["polygon"]).area >= floor["area"]*0.4]
     if not ceiling_options:
         raise ValueError("No matching ceiling patch; explicit reconstruction is required")
-    # A higher, larger slab can coexist with a real suspended ceiling below it.
-    # Prefer the lowest substantial room-facing patch, not maximum slab area.
-    # The 40% overlap condition above rejects narrow wall caps and small trim.
     ceiling = min(ceiling_options, key=lambda p: p["z"])
     polygon, roof = floor["polygon"], ceiling["polygon"]
     simplification = (ceiling["z"]-floor["z"])*0.0005

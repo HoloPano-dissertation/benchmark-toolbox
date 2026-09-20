@@ -2,7 +2,7 @@ import math
 from pathlib import Path
 
 POLICY_VERSION = "shell-clipped-off-furniture"
-STRUCTURAL_STEMS = frozenset({"ceil", "floor", "wall", "others"})
+STRUCTURAL_STEMS = frozenset({"ceil", "floor", "wall", "others", "architecture"})
 
 
 def camera_clip_planes(room_height, clearance):

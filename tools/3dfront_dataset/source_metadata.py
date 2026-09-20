@@ -14,6 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "_lib"))
 from export_ground_truth import room_geometry
+from room_list import read_room_list
 
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
 MINIMUM_OBJECTS = 2
@@ -28,6 +29,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("archive", type=Path)
     parser.add_argument("scene_root", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--rooms",
+                        help="Take only the rooms of this list: a JSON array of "
+                             "<house>/<room>, or one id per line. Without it the whole "
+                             "source is read, and the class list is counted over all of it")
     parser.add_argument("--minimum-objects", type=int, default=MINIMUM_OBJECTS)
     parser.add_argument("--maximum-spread", type=float, default=MAXIMUM_SPREAD)
     parser.add_argument("--minimum-class-instances", type=int,
@@ -173,6 +178,9 @@ def main() -> None:
     available = {name.split("/")[-1][:-5] for name in archive.namelist()
                  if name.endswith(".json")}
 
+    listed = set(read_room_list(args.rooms)) if args.rooms else None
+    listed_houses = {room_id.split("/")[0] for room_id in listed} if listed else None
+
     scales, diagnostics = {}, {}
     categories, titles = {}, {}
     instances = collections.Counter()
@@ -180,6 +188,8 @@ def main() -> None:
     rejected = collections.Counter()
     for house_dir in sorted(p for p in scene_root.iterdir() if p.is_dir()):
         house = house_dir.name
+        if listed_houses is not None and house not in listed_houses:
+            continue
         if house not in available:
             rejected["house_not_in_archive"] += 1
             continue
@@ -192,6 +202,8 @@ def main() -> None:
         titles.update(house_titles)
         for room_dir in sorted(p for p in house_dir.iterdir() if p.is_dir()):
             room_id = "%s/%s" % (house, room_dir.name)
+            if listed is not None and room_id not in listed:
+                continue
             try:
                 _, _, objects = room_geometry(room_dir, scene_root)
             except Exception:
@@ -223,6 +235,7 @@ def main() -> None:
         classes, instances, args.minimum_class_instances)
     payload = {
         "source_archive": str(args.archive),
+        "source_room_list": str(args.rooms) if args.rooms else None,
         "scales": scales,
         "geometry_scales": geometry_scales,
         "scale_diagnostics": diagnostics,

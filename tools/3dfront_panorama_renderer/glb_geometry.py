@@ -109,6 +109,21 @@ def glb_triangles(path):
     return triangles
 
 
+def obj_triangles(path):
+    points, faces = [], []
+    for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("v "):
+            points.append([float(v) for v in line.split()[1:4]])
+        elif line.startswith("f "):
+            corners = [int(part.split("/")[0]) for part in line.split()[1:]]
+            corners = [c-1 if c > 0 else len(points)+c for c in corners]
+            for index in range(1, len(corners)-1):
+                faces.append((corners[0], corners[index], corners[index+1]))
+    if not faces:
+        return np.zeros((0, 3, 3))
+    return np.asarray(points, dtype=float)[np.asarray(faces, dtype=int)]
+
+
 def glb_bounds(path):
     with Path(path).open("rb") as stream:
         magic, version, _ = struct.unpack("<4sII", stream.read(12))

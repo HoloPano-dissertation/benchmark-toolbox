@@ -9,6 +9,7 @@ import numpy as np
 from shapely.geometry import Point, shape
 
 from .metric_scale import ScaleError, load_scale_table, resolve_scale
+from .room_list import read_room_list
 
 SPLITS = ("train", "val", "test")
 DEFAULT_VAL = 0.15
@@ -16,15 +17,30 @@ DEFAULT_TEST = 0.15
 POLICY_ID = "excluded-rooms"
 
 
-def source_rooms(scene_root):
+def source_rooms(scene_root, rooms=None):
     if not scene_root.is_dir():
         raise NotADirectoryError("Source of rooms not found: %s" % scene_root)
-    rooms = []
-    for house in sorted(p for p in scene_root.iterdir() if p.is_dir()):
-        for room in sorted(p for p in house.iterdir() if p.is_dir()):
-            if any(room.glob("*.glb")):
-                rooms.append("%s/%s" % (house.name, room.name))
-    return rooms
+    if rooms is None:
+        found = []
+        for house in sorted(p for p in scene_root.iterdir() if p.is_dir()):
+            for room in sorted(p for p in house.iterdir() if p.is_dir()):
+                if any(room.glob("*.glb")):
+                    found.append("%s/%s" % (house.name, room.name))
+        return found
+    found = []
+    missing = []
+    for room_id in rooms:
+        room = scene_root / room_id
+        if room.is_dir() and any(room.glob("*.glb")):
+            found.append(room_id)
+        else:
+            missing.append(room_id)
+    if missing:
+        raise FileNotFoundError(
+            "%d of the %d listed rooms carry no GLB under %s. Silently dropping them would "
+            "leave the size of the set unexplained; first absent: %s"
+            % (len(missing), len(rooms), scene_root, ", ".join(missing[:5])))
+    return found
 
 
 def recover(scene_root, room_id):
@@ -149,7 +165,7 @@ def house_disjoint_split(rooms, val=DEFAULT_VAL, test=DEFAULT_TEST, seed=0):
     return {name: sorted(values) for name, values in assigned.items()}
 
 
-def write_split(splits_dir, assigned, excluded, scene_root, force=False):
+def write_split(splits_dir, assigned, excluded, scene_root, force=False, room_list=None):
     splits_dir.mkdir(parents=True, exist_ok=True)
     existing = [splits_dir / (name + ".txt") for name in SPLITS]
     if any(path.is_file() for path in existing) and not force:
@@ -176,6 +192,7 @@ def write_split(splits_dir, assigned, excluded, scene_root, force=False):
         "expected_retained_rooms": retained,
         "views_per_room": 4,
         "source_root": str(scene_root),
+        "source_room_list": str(room_list) if room_list else None,
         "evidence": "Layout recovery and the metric checks of the scale report, applied "
                     "to every room of the source.",
         "rooms": rooms,
@@ -193,15 +210,16 @@ def write_split(splits_dir, assigned, excluded, scene_root, force=False):
 
 
 def freeze(scene_root, splits_dir, metadata=None, val=DEFAULT_VAL, test=DEFAULT_TEST,
-           seed=0, reference_height=None, force=False, views=4):
+           seed=0, reference_height=None, force=False, views=4, room_list=None):
     scene_root = Path(scene_root).resolve()
     table = load_scale_table(Path(metadata)) if metadata else None
-    rooms = source_rooms(scene_root)
+    listed = read_room_list(room_list) if room_list else None
+    rooms = source_rooms(scene_root, listed)
     if not rooms:
         raise ValueError("No rooms of the form <house>/<room>/*.glb under %s" % scene_root)
     kept, excluded = review_rooms(scene_root, rooms, table, reference_height, views)
     assigned = house_disjoint_split(kept, val, test, seed)
-    report = write_split(Path(splits_dir), assigned, excluded, scene_root, force)
+    report = write_split(Path(splits_dir), assigned, excluded, scene_root, force, room_list)
     report["source_rooms"] = len(rooms)
     report["scale_source"] = "original 3D-FRONT" if table else "ceiling anchor"
     return report

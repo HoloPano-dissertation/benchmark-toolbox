@@ -108,6 +108,42 @@ def test_a_source_without_rooms_is_reported_plainly(freeze, tmp_path):
         freeze.freeze(tmp_path, tmp_path / "splits")
 
 
+def populated_source(root, room_ids):
+    for room_id in room_ids:
+        room = root / room_id
+        room.mkdir(parents=True)
+        (room / "floor.glb").write_bytes(b"glTF")
+    return root
+
+
+def test_a_room_list_narrows_the_source(freeze, tmp_path):
+    populated_source(tmp_path, ["h1/Bedroom-1", "h1/Bedroom-2", "h2/Library-3"])
+    listed = tmp_path / "rooms.json"
+    listed.write_text(json.dumps(["h2/Library-3", "h1/Bedroom-2"]), encoding="utf-8")
+    assert freeze.source_rooms(tmp_path, freeze.read_room_list(listed)) == \
+        ["h1/Bedroom-2", "h2/Library-3"]
+    assert len(freeze.source_rooms(tmp_path)) == 3
+
+
+def test_the_room_list_module_is_importable_flat(tmp_path):
+    import importlib.util
+    path = DATASET / "_lib" / "room_list.py"
+    spec = importlib.util.spec_from_file_location("room_list", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    listed = tmp_path / "rooms.json"
+    listed.write_text(json.dumps(["h/b", "h/a", "h/a"]), encoding="utf-8")
+    assert module.read_room_list(listed) == ["h/a", "h/b"]
+
+
+def test_a_listed_room_that_is_absent_stops_the_freeze(freeze, tmp_path):
+    populated_source(tmp_path, ["h1/Bedroom-1"])
+    listed = tmp_path / "rooms.txt"
+    listed.write_text("h1/Bedroom-1\nh1/Bedroom-9\n", encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="h1/Bedroom-9"):
+        freeze.source_rooms(tmp_path, freeze.read_room_list(listed))
+
+
 def room_layout(half=1.5, height=2.6):
     ring = [[-half, -half], [half, -half], [half, half], [-half, half], [-half, -half]]
     return {"polygon": {"type": "Polygon", "coordinates": [ring]},
