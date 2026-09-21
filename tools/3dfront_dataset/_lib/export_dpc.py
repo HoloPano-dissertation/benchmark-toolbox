@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Create collision-free Pano3D image splits from MIDI benchmark manifests."""
-
 from __future__ import annotations
 
 import argparse

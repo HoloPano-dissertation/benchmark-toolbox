@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Train an 8-class Detectron2 Mask R-CNN on rendered MIDI panoramas."""
-
 from __future__ import annotations
 
 import argparse

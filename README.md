@@ -217,40 +217,57 @@ benchmark-toolbox/
 [`splits/excluded_rooms.json`](tools/3dfront_dataset/splits/excluded_rooms.json).
 
 ```bash
-# 1. Скачать и распаковать 3D-FRONT-TEST-SCENE из набора выше, а также описания сцен
-#    исходного 3D-FRONT (3D-FRONT.zip, 2.1 ГБ).
+# 1. Скачать и распаковать 3D-FRONT-SCENE из набора выше, а также два архива исходного
+#    3D-FRONT: описания сцен (3D-FRONT.zip, 2.1 ГБ) и текстуры (3D-FRONT-texture.zip,
+#    1.8 ГБ). Переработка не содержит ни архитектуры комнат, ни материалов к ней.
 
 # 2. Прочитать точные покомнатные масштабы и классы объектов из исходного релиза.
 python tools/3dfront_dataset/source_metadata.py \
-  /data/raw/3D-FRONT.zip /data/3D-FRONT-TEST-SCENE /data/source_metadata.json
+  /data/raw/3D-FRONT.zip /data/3D-FRONT-SCENE /data/source_metadata.json \
+  --rooms /data/3D-Front/valid_room_ids.json
 
 # 3. Зафиксировать разбиение без пересечения по домам: здесь же выполняются проверка
 #    геометрии, проверка метрического масштаба и расстановка камер, а каждая
-#    отбракованная комната записывается с причиной отказа (~15 мин).
-python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
-  --metadata /data/source_metadata.json
+#    отбракованная комната записывается с причиной отказа.
+python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-SCENE \
+  --metadata /data/source_metadata.json --rooms /data/3D-Front/valid_room_ids.json
 
 # 4. Создать эксперимент по этому разбиению.
-python tools/3dfront_dataset/prepare.py init /data/3D-FRONT-TEST-SCENE /data/front3d
+python tools/3dfront_dataset/prepare.py init /data/3D-FRONT-SCENE /data/front3d
 
-# 5. Сначала спланировать камеры: план явно завершается отказом на комнате, которую
+# 5. Собрать архитектуру комнат из исходного релиза: стены, полы, потолки, плинтусы,
+#    откосы и встроенные шкафы вместе с их материалами.
+python tools/3dfront_dataset/scene_architecture.py \
+  /data/raw/3D-FRONT.zip /data/raw/3D-FRONT-texture.zip /data/3D-FRONT-SCENE - \
+  /data/front3d-architecture --rooms /data/front3d/state/rooms-all.json \
+  --metadata /data/source_metadata.json
+
+# 6. Сначала спланировать камеры: план явно завершается отказом на комнате, которую
 #    снять не удается.
 python tools/3dfront_panorama_renderer/run_batch.py \
-  /data/front3d/splits/rooms.jsonl /data/front3d/plan --views 4 --plan-only
+  /data/front3d/splits/rooms.jsonl /data/front3d/plan --views 4 --plan-only \
+  --architecture-root /data/front3d-architecture
 
-# 6. Отрисовать панорамы, когда план прошел без отказов.
+# 7. Отрисовать панорамы, когда план прошел без отказов.
 python tools/3dfront_panorama_renderer/run_batch.py \
-  /data/front3d/splits/rooms.jsonl /data/front3d/outputs --views 4 --samples 32
+  /data/front3d/splits/rooms.jsonl /data/front3d/outputs --views 4 --samples 96 \
+  --architecture-root /data/front3d-architecture \
+  --ambient 4.0 --light-temperature 2700-5000
 
-# 7. Выгрузить метрическую эталонную разметку, отношения, объекты, COCO, цели для
+# 8. Перевести в исключения комнаты, которые отверг рендерер.
+python tools/3dfront_dataset/prepare.py reject /data/front3d \
+  --rendered /data/front3d/outputs \
+  --reasons /data/front3d/state/render-failure-reasons.json
+
+# 9. Выгрузить метрическую эталонную разметку, отношения, объекты, COCO, цели для
 #    оценки макета и входные данные DPC.
 python tools/3dfront_dataset/prepare.py export /data/front3d \
   --scale-table /data/source_metadata.json --class-table /data/source_metadata.json
 
-# 8. Проверить согласованность выгрузок между собой.
+# 10. Проверить согласованность выгрузок между собой.
 python tools/3dfront_dataset/prepare.py validate /data/front3d
 
-# 9. Собрать сцены в том виде, в котором их читают сравниваемые методы.
+# 11. Собрать сцены в том виде, в котором их читают сравниваемые методы.
 PYTHONPATH=/path/to/Pano3D python tools/3dfront_training/export_dpc_scenes.py \
   /data/front3d /data/front3d/dpc_scenes
 ```
@@ -258,10 +275,11 @@ PYTHONPATH=/path/to/Pano3D python tools/3dfront_training/export_dpc_scenes.py \
 Результат определяется четырьмя свойствами источника, и все они учтены в шагах выше.
 Каждая комната нормирована собственным масштабом, поэтому метры восстанавливаются по
 покомнатному масштабу, прочитанному из исходного релиза; привязка по высоте потолка
-служит запасным вариантом и применяется, только когда точного масштаба нет. Файл
-`floor.glb` комнаты часто содержит плиту пола всей квартиры, поэтому отрисовщик
-обрезает восстановленный контур по упакованной оболочке комнаты. Камеру нельзя ставить
-на мебель, а по одной лишь оболочке комнаты этого не выразить. Объект, пересекающий шов
+служит запасным вариантом и применяется, только когда точного масштаба нет.
+Архитектуры комнат переработка не содержит: у трети комнат нет стен, а уцелевшие
+поверхности лишены материалов, поэтому стены, полы и потолки собираются из исходного
+релиза и подаются отрисовщику отдельно. Камеру нельзя ставить на мебель, а по одному
+лишь габариту комнаты этого не выразить. Объект, пересекающий шов
 панорамы, размечается в кадре, сдвинутом на половину ширины, — так же, как сравниваемые
 методы запускают свой детектор.
 

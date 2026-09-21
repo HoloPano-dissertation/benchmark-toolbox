@@ -249,7 +249,7 @@ def room_geometry(room_dir: Path, scene_root: Path) -> tuple[np.ndarray, np.ndar
 def main() -> None:
     args = parse_args()
     experiment_root = args.experiment_root.resolve()
-    source_link = experiment_root / "source" / "3D-FRONT-TEST-SCENE"
+    source_link = experiment_root / "source" / "rooms"
     scene_root = (args.scene_root or source_link).resolve()
     source_manifests = experiment_root / "manifests"
     output_manifests = experiment_root / "manifests_gt"

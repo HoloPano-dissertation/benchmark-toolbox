@@ -14,13 +14,14 @@
 
 | Split | Комнаты | Панорамы (4 на комнату) |
 | --- | ---: | ---: |
-| train | 663 | 2652 |
-| val | 148 | 592 |
-| test | 141 | 564 |
-| Всего | 952 | 3808 |
+| train | 6687 | 26 748 |
+| val | 1446 | 5784 |
+| test | 1434 | 5736 |
+| Всего | 9567 | 38 268 |
 
-Источник — `3D-FRONT-TEST-SCENE` репозитория
-[huanngzh/3D-Front](https://huggingface.co/datasets/huanngzh/3D-Front); это **наше**
+Мебель берётся из `3D-FRONT-SCENE` репозитория
+[huanngzh/3D-Front](https://huggingface.co/datasets/huanngzh/3D-Front), архитектура
+комнат — из исходного релиза 3D-FRONT (см. `scene_architecture.py`). Это **наше**
 разбиение, не официальные train/val/test MIDI. Списки ID лежат в `splits/*.txt`,
 причины исключений и ожидаемое число комнат — в `splits/excluded_rooms.json`,
 и загрузчик сверяется именно с ним. Другой источник даёт своё разбиение и свои числа.
@@ -32,8 +33,9 @@
 Разбиение строит команда `freeze`; она же применяет правила исключения:
 
 ```bash
-python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
-  --metadata /data/front3d/state/source_metadata.json
+python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-SCENE \
+  --metadata /data/front3d/state/source_metadata.json \
+  --rooms /data/3D-Front/valid_room_ids.json
 ```
 
 Отбраковываются комнаты, у которых не восстанавливается геометрия, схлопнулся контур,
@@ -41,8 +43,9 @@ python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
 поставить требуемое число камер. Последнюю проверку `freeze` выполняет тем же кодом
 отбора, что и рендерер, но без Blender: расстояние до поверхностей считается по точкам,
 насэмплированным с треугольников. Полное совпадение с рендерером не гарантируется —
-`--plan-only` остаётся окончательной проверкой, и редкий отказ там всё ещё возможен;
-тогда `freeze --force` запускают повторно, чтобы дописать его в исключения.
+`--plan-only` остаётся окончательной проверкой, и отказ там всё ещё возможен.
+Такие комнаты переводит в исключения подкоманда `reject` (ниже), а не повторный `freeze`:
+пересчёт тем же приближённым методом даст тот же результат.
 
 Источник можно сузить списком комнат — `--rooms <файл>`, где файл либо JSON-массив
 идентификаторов `<дом>/<комната>`, либо по одному идентификатору на строку. Так берётся
@@ -54,6 +57,23 @@ python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
 Команда отказывается перезаписывать существующее разбиение без `--force`: подменить его
 незаметно значит сделать прежние числа несопоставимыми с новыми.
 
+## Комнаты, которые не отрисовались
+
+Рендерер — последнее слово: он работает в Blender с настоящими мешами и отвергает часть
+комнат уже после того, как разбиение их пообещало. Такие комнаты переводит в исключения
+подкоманда `reject`:
+
+```bash
+python tools/3dfront_dataset/prepare.py reject /data/front3d-experiment \
+  --rendered /data/panoramas/hdf5 \
+  --reasons /data/front3d-experiment/state/render-failure-reasons.json
+```
+
+Она сверяет каждую комнату разбиения с готовым рендером тем же правилом, что и
+возобновление пакетного запуска: метка, читаемые метаданные, все кадры ненулевые.
+Комнату без записанной причины исключить нельзя — работа останавливается с их перечнем.
+После неё состав эксперимента, разбиение и политика исключений снова сходятся.
+
 ## Полный запуск
 
 `/data/front3d-experiment` должна быть новой папкой.
@@ -61,15 +81,23 @@ python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
 
 ```bash
 python tools/3dfront_dataset/source_metadata.py \
-  /data/raw/3D-FRONT.zip /data/3D-FRONT-TEST-SCENE \
-  /data/front3d-experiment/state/source_metadata.json
+  /data/raw/3D-FRONT.zip /data/3D-FRONT-SCENE \
+  /data/front3d-experiment/state/source_metadata.json \
+  --rooms /data/3D-Front/valid_room_ids.json
 python tools/3dfront_dataset/prepare.py init \
-  /data/3D-FRONT-TEST-SCENE /data/front3d-experiment
+  /data/3D-FRONT-SCENE /data/front3d-experiment
+python tools/3dfront_dataset/scene_architecture.py \
+  /data/raw/3D-FRONT.zip /data/raw/3D-FRONT-texture.zip \
+  /data/3D-FRONT-SCENE - /data/front3d-architecture \
+  --rooms /data/front3d-experiment/state/rooms-all.json \
+  --metadata /data/front3d-experiment/state/source_metadata.json
 python tools/3dfront_panorama_renderer/run_batch.py \
   /data/front3d-experiment/splits/rooms.jsonl /data/front3d-experiment/plan \
-  --views 4 --plan-only
+  --views 4 --plan-only --architecture-root /data/front3d-architecture
 python tools/3dfront_panorama_renderer/run_batch.py \
-  /data/front3d-experiment/splits/rooms.jsonl /data/front3d-experiment/outputs
+  /data/front3d-experiment/splits/rooms.jsonl /data/front3d-experiment/outputs \
+  --architecture-root /data/front3d-architecture \
+  --samples 96 --ambient 4.0 --light-temperature 2700-5000
 python tools/3dfront_dataset/prepare.py export /data/front3d-experiment \
   --scale-table /data/front3d-experiment/state/source_metadata.json \
   --class-table /data/front3d-experiment/state/source_metadata.json
@@ -87,7 +115,7 @@ python tools/3dfront_dataset/prepare.py validate /data/front3d-experiment
 | --- | --- |
 | `rgb/`, `manifests/` | PNG и JSONL со всеми sample_id |
 | `ground_truth/`, `manifests_gt/` | 3D bbox предметов и layout для toolbox |
-| `coco/` | train/val/test JSON: 2D bbox и instance masks (RLE), 8 классов |
+| `coco/` | train/val/test JSON: 2D bbox и instance masks (RLE), по числу обучающих классов |
 | `horizonnet/` | изображения и dense NPZ: границы пола/потолка, вероятности углов |
 | `dpc_dataset/` | ссылки на RGB, split JSON, соответствие имён исходным sample_id |
 | `objects/` | по папке на модель: меши, выборки знакового расстояния, вырезки |
@@ -98,9 +126,12 @@ python tools/3dfront_dataset/prepare.py validate /data/front3d-experiment
 переобучения** BEN/LDIF/MGN/Scene-GCN: их специфические обучающие targets
 требуют отдельной подготовки. Экспорт не означает, что все сети уже обучены.
 
-Классы берутся из исходного 3D-FRONT: десять обучающих категорий, а подробное название
-из семидесяти двух сохраняется в `attributes.fine_class`. Список пишется в
-`state/classes.json`, и все экспортёры читают его оттуда.
+Классы берутся из исходного 3D-FRONT. Обучающими становятся те, у которых набралось
+не меньше ста экземпляров, поэтому их число зависит от размера набора: на нынешних
+9567 комнатах их четырнадцать, на прежних 952 было десять. Подробное название (их 95)
+сохраняется в `attributes.fine_class`. Список пишется в `state/classes.json`, и все
+экспортёры читают его оттуда — **числа на наборах разного размера несопоставимы
+напрямую**.
 Маски получаются из рендера автоматически; 3D bbox — PCA по исходной геометрии
 в системе камеры (Z вверх). Вручную обводить тысячи кадров не нужно.
 

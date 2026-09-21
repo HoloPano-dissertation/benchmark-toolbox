@@ -187,30 +187,48 @@ you point step 3 at. The composition of the split shipped here is recorded in
 [`splits/excluded_rooms.json`](tools/3dfront_dataset/splits/excluded_rooms.json).
 
 ```bash
-# 1. Download and unpack 3D-FRONT-TEST-SCENE from the dataset above, and the scene
-#    descriptions of the original 3D-FRONT (3D-FRONT.zip, 2.1 GB).
+# 1. Download and unpack 3D-FRONT-SCENE from the dataset above, and two archives of
+#    the original 3D-FRONT: the scene descriptions (3D-FRONT.zip, 2.1 GB) and the
+#    textures (3D-FRONT-texture.zip, 1.8 GB). The rework carries neither the
+#    architecture of the rooms nor its materials.
 
 # 2. Read the exact per-room scales and the object classes out of the original release.
 python tools/3dfront_dataset/source_metadata.py \
-  /data/raw/3D-FRONT.zip /data/3D-FRONT-TEST-SCENE /data/source_metadata.json
+  /data/raw/3D-FRONT.zip /data/3D-FRONT-SCENE /data/source_metadata.json \
+  --rooms /data/3D-Front/valid_room_ids.json
 
 # 3. Freeze the house-disjoint split: geometry, metric checks and camera placement are
-#    all applied here, and every rejected room is recorded with its reason (~15 min).
-python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-TEST-SCENE \
-  --metadata /data/source_metadata.json
+#    all applied here, and every rejected room is recorded with its reason.
+python tools/3dfront_dataset/prepare.py freeze /data/3D-FRONT-SCENE \
+  --metadata /data/source_metadata.json --rooms /data/3D-Front/valid_room_ids.json
 
 # 4. Create the experiment from that split.
-python tools/3dfront_dataset/prepare.py init /data/3D-FRONT-TEST-SCENE /data/front3d
+python tools/3dfront_dataset/prepare.py init /data/3D-FRONT-SCENE /data/front3d
 
-# 5. Plan the cameras first; the plan fails loudly on a room it cannot photograph.
+# 5. Rebuild the architecture of the rooms from the original release: walls, floors,
+#    ceilings, baseboards, window reveals and built-in cabinets, with their materials.
+python tools/3dfront_dataset/scene_architecture.py \
+  /data/raw/3D-FRONT.zip /data/raw/3D-FRONT-texture.zip /data/3D-FRONT-SCENE - \
+  /data/front3d-architecture --rooms /data/front3d/state/rooms-all.json \
+  --metadata /data/source_metadata.json
+
+# 6. Plan the cameras first; the plan fails loudly on a room it cannot photograph.
 python tools/3dfront_panorama_renderer/run_batch.py \
-  /data/front3d/splits/rooms.jsonl /data/front3d/plan --views 4 --plan-only
+  /data/front3d/splits/rooms.jsonl /data/front3d/plan --views 4 --plan-only \
+  --architecture-root /data/front3d-architecture
 
-# 6. Render the panoramas once the plan is clean.
+# 7. Render the panoramas once the plan is clean.
 python tools/3dfront_panorama_renderer/run_batch.py \
-  /data/front3d/splits/rooms.jsonl /data/front3d/outputs --views 4 --samples 32
+  /data/front3d/splits/rooms.jsonl /data/front3d/outputs --views 4 --samples 96 \
+  --architecture-root /data/front3d-architecture \
+  --ambient 4.0 --light-temperature 2700-5000
 
-# 7. Export metric ground truth, relations, objects, COCO, layout targets and DPC inputs.
+# 8. Move the rooms the renderer refused into the reviewed exclusions.
+python tools/3dfront_dataset/prepare.py reject /data/front3d \
+  --rendered /data/front3d/outputs \
+  --reasons /data/front3d/state/render-failure-reasons.json
+
+# 9. Export metric ground truth, relations, objects, COCO, layout targets and DPC inputs.
 python tools/3dfront_dataset/prepare.py export /data/front3d \
   --scale-table /data/source_metadata.json --class-table /data/source_metadata.json
 

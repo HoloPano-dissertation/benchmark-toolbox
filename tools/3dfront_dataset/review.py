@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-"""Make reproducible review sheets from an existing audit, without rerendering."""
-
 import argparse
 import json
 import random

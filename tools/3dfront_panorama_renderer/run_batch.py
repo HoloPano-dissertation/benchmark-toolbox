@@ -9,12 +9,6 @@ import sys
 
 
 def failure_reason(text):
-    """The line of a renderer traceback worth recording against a room.
-
-    Blender prints hundreds of lines per room; what tells a person why the room was
-    refused is the last raised error. Without it a failure report says only "exit 2",
-    and the reason has to be dug out of Slurm logs months later.
-    """
     reason = ""
     for line in (text or "").splitlines():
         line = line.strip()
@@ -26,13 +20,6 @@ def failure_reason(text):
 
 
 def discard_room(output):
-    """Clear the leftovers of a render that did not finish.
-
-    The renderer refuses a directory that is not empty, so a room we have decided to
-    render has to lose its remains first: frames of zero length, metadata that never
-    arrived, a marker with nothing behind it. Called only for a room this run is about
-    to render, so the path is one of our own outputs.
-    """
     shutil.rmtree(output, ignore_errors=True)
 
 
@@ -100,9 +87,6 @@ def main():
                 continue
             print(f"INCOMPLETE {room_id}: marker without a usable render behind it, "
                   f"rendering again", flush=True)
-        # Past this point the room is going to be rendered, so whatever an earlier run
-        # left in its directory is worthless - and the renderer refuses to start unless
-        # the directory is empty.
         discard_room(output)
         command = ["bash", str(runner), record["room_dir"], str(output),
                    "--views", str(args.views), "--min-clearance", str(clearance),

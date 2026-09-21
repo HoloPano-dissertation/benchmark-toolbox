@@ -51,7 +51,7 @@ def initialize(scene_root, root):
         row.update(room_dir=str(room), min_clearance=min(0.1, 0.04*height))
     for name in ("splits", "source", "outputs", "state"):
         (root / name).mkdir(parents=True, exist_ok=True)
-    (root / "source/3D-FRONT-TEST-SCENE").symlink_to(scene_root, target_is_directory=True)
+    (root / "source/rooms").symlink_to(scene_root, target_is_directory=True)
     for split in ("train", "val", "test"):
         shutil.copyfile(HERE / "splits" / (split+".txt"), root / "splits" / (split+".txt"))
     (root / "splits/rooms.jsonl").write_text("".join(json.dumps(r)+"\n" for r in rows))
@@ -166,7 +166,9 @@ def main():
         actual = index_rows([json.loads(s) for s in (root / "splits/rooms.jsonl").read_text().splitlines() if s.strip()])
         expected = index_rows(frozen_rooms())
         if set(actual) != set(expected) or any(actual[k]["split"] != expected[k]["split"] for k in expected):
-            raise ValueError("Active dataset must match the frozen 981-room split")
+            raise ValueError(
+                "The rooms of this experiment differ from the frozen split of %d rooms; "
+                "exports and metrics from the two are not comparable" % len(expected))
         if args.command == "export":
             (root / "state").mkdir(exist_ok=True)
             (root / "state/training_gate.json").write_text('{"training_approved":false,"reason":"Exports changed; review and validation required"}\n')

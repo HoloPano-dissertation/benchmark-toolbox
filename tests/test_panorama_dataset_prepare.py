@@ -17,13 +17,13 @@ def test_frozen_split_is_house_disjoint_and_excludes_approved_rooms():
     from prepare import frozen_rooms
     rows = frozen_rooms()
     assert {s: sum(r["split"] == s for r in rows) for s in ("train", "val", "test")} == {
-        "train": 663, "val": 148, "test": 141}
+        "train": 6687, "val": 1446, "test": 1434}
     houses = {s: {r["house_id"] for r in rows if r["split"] == s} for s in ("train", "val", "test")}
     assert not houses["train"] & houses["test"]
     assert not houses["train"] & houses["val"]
     assert not houses["test"] & houses["val"]
     excluded = json.loads((DATASET / "splits/excluded_rooms.json").read_text())["rooms"]
-    assert len(excluded) == 45
+    assert len(excluded) == 947
     assert not {r["room_id"] for r in rows} & {r["room_id"] for r in excluded}
 
 

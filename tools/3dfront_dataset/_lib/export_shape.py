@@ -57,7 +57,7 @@ def unit_mesh(triangles: np.ndarray, bbox: dict, camera: np.ndarray, scale: floa
 def main() -> None:
     args = parse_args()
     root = args.experiment_root.resolve()
-    scene_root = (args.scene_root or root / "source" / "3D-FRONT-TEST-SCENE").resolve()
+    scene_root = (args.scene_root or root / "source" / "rooms").resolve()
     shape_root = root / "objects"
     written: dict[str, Path] = {}
     failures: list[dict] = []

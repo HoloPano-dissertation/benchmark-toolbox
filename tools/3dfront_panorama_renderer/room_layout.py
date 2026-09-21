@@ -1,9 +1,3 @@
-"""Recover a room envelope from semantic structure, never the global asset bbox.
-
-The input filenames do not reliably separate floors, walls and ceilings. Select
-room-facing planes near furniture anchors; fail rather than invent an enclosure.
-"""
-
 from pathlib import Path
 
 import numpy as np

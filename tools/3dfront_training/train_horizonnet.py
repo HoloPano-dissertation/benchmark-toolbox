@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Train the vendored HorizonNet using package imports and a held-out val split.
-
-Requires the Pano3D repository on PYTHONPATH. The encoder uses ImageNet weights;
-no iGibson checkpoint is loaded. Checkpoints use HorizonNet's native format.
-"""
-
 import argparse
 import json
 import random

@@ -88,7 +88,7 @@ def main() -> None:
     args = parse_args()
     experiment_root = args.experiment_root.resolve()
     output_root = (args.output or experiment_root / "horizonnet").resolve()
-    scene_root = (experiment_root / "source" / "3D-FRONT-TEST-SCENE").resolve()
+    scene_root = (experiment_root / "source" / "rooms").resolve()
     room_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     counts: Counter[str] = Counter()
     rooms_seen = set()
