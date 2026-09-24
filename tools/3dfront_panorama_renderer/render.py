@@ -78,6 +78,20 @@ def source_label(path: Path) -> str:
     return path.stem[: match.start()] if match else path.stem
 
 
+def fixture_lights(meshes, ceiling_z):
+   places = []
+    for mesh in meshes:
+        if str(mesh.get_cp("source_label")) != "Lighting":
+            continue
+        box = np.asarray(mesh.get_bound_box())
+        lower, upper = box.min(axis=0), box.max(axis=0)
+        if upper[2] < ceiling_z*0.3 and upper[2] < lower[2] + 1e-6:
+            continue
+        centre = (lower+upper) / 2.0
+        places.append([float(centre[0]), float(centre[1]), float(lower[2]-0.02*(upper[2]-lower[2]+1e-3))])
+    return places
+
+
 def room_temperature(setting, room_name):
     text = str(setting or "0").strip()
     if "-" not in text:
@@ -266,7 +280,8 @@ def main(metadata_filename="render.json") -> None:
     room_height = bounds_max[2]-bounds_min[2]
     kelvin = room_temperature(args.light_temperature, args.room_dir.name)
     lamp_colour = blackbody(kelvin) if kelvin else None
-    light_locations = [[p[0], p[1], p[2]+0.5*(bounds_max[2]-p[2])] for p in camera_locations]
+    light_locations = fixture_lights(meshes, bounds_max[2]) \
+        or [[p[0], p[1], p[2]+0.5*(bounds_max[2]-p[2])] for p in camera_locations]
     for location in light_locations:
         light = bproc.types.Light()
         light.set_location(location)

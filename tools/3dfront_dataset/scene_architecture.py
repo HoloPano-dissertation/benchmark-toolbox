@@ -16,7 +16,6 @@ INTERIOR = ("WallInner", "Floor", "Ceiling", "CustomizedCeiling", "CustomizedFea
             "Baseboard", "CustomizedPlatform", "CustomizedBackgroundModel", "Cabinet",
             "CustomizedFurniture", "Front", "Back", "Hole", "Pocket")
 DEFAULT_COLOUR = (0.78, 0.78, 0.78)
-FACING_DOWN_ONLY = frozenset({"CustomizedCeiling"})
 CEILING_TYPES = frozenset({"Ceiling", "CustomizedCeiling"})
 
 
@@ -41,14 +40,6 @@ def face_the_room(points, faces, centre):
     faces = faces.copy()
     faces[flip] = faces[flip][:, ::-1]
     return faces
-
-
-def downward_faces(faces, normals, vertex_count):
-    if not normals or len(normals) != vertex_count*3:
-        return faces
-    vertex_normals = np.asarray(normals, dtype=float).reshape(-1, 3)
-    facing = vertex_normals[faces][:, :, 1].mean(axis=1)
-    return faces[facing < -0.1]
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,31 +119,66 @@ def flat_level(corners):
     return round(float(corners[:, 2].mean()), 4)
 
 
+def facing_the_room_only(kind, faces, normals, vertex_count):
+    if kind not in CEILING_TYPES:
+        return faces
+    if not normals or len(normals) != vertex_count*3:
+        return faces
+    vertex_normals = np.asarray(normals, dtype=float).reshape(-1, 3)
+    facing = vertex_normals[faces][:, :, 1].mean(axis=1)      # ось Y сцены — вверх
+    kept = faces[facing < -0.1]
+    return kept if len(kept) else faces
+
+
 def thin_coincident_ceilings(surfaces):
-    area_at = {}
+    from shapely.geometry import Polygon
+    from shapely.ops import unary_union
+
+    shapes = {}
     for index, (kind, points, faces, _) in enumerate(surfaces):
         if kind not in CEILING_TYPES:
             continue
-        for face in faces:
-            level = flat_level(points[face])
-            if level is None:
+        for number, face in enumerate(faces):
+            if flat_level(points[face]) is None:
                 continue
-            corners = points[face]
-            area = abs(np.cross(corners[1]-corners[0], corners[2]-corners[0])[2]) / 2
-            area_at.setdefault(level, {}).setdefault(index, 0.0)
-            area_at[level][index] += area
-    owner = {level: max(claims, key=claims.get) for level, claims in area_at.items()}
+            polygon = Polygon(points[face][:, :2])
+            if not polygon.is_valid:
+                polygon = polygon.buffer(0)               # самопересечения в исходнике
+            if polygon.is_valid and polygon.area > 1e-9:
+                shapes[(index, number)] = polygon
+    if len(shapes) < 2:
+        return surfaces
+    levels = {}
+    for index, (kind, points, faces, _) in enumerate(surfaces):
+        if kind not in CEILING_TYPES:
+            continue
+        for number, face in enumerate(faces):
+            level = flat_level(points[face])
+            if level is not None:
+                levels.setdefault(level, set()).add(index)
+    shared = {level for level, owners in levels.items() if len(owners) > 1}
+    dropped = set()
+    for (index, number), polygon in shapes.items():
+        level = flat_level(surfaces[index][1][surfaces[index][2][number]])
+        if level not in shared:
+            continue
+        try:
+            others = unary_union([shape for key, shape in shapes.items()
+                                  if key != (index, number) and key not in dropped])
+            uncovered = polygon.difference(others).area
+        except Exception:
+            # вырожденная геометрия исходника: решить, закрыто ли место, нечем —
+            # грань остаётся, потому что дыра в потолке хуже лишней поверхности
+            continue
+        if uncovered <= polygon.area*0.02:
+            dropped.add((index, number))
+    if not dropped:
+        return surfaces
     thinned = []
     for index, (kind, points, faces, mesh) in enumerate(surfaces):
-        if kind not in CEILING_TYPES or not len(faces):
-            thinned.append((kind, points, faces, mesh))
-            continue
-        keep = []
-        for face in faces:
-            level = flat_level(points[face])
-            if level is None or owner.get(level) == index:
-                keep.append(face)
-        thinned.append((kind, points, np.asarray(keep, dtype=int).reshape(-1, 3), mesh))
+        keep = [face for number, face in enumerate(faces) if (index, number) not in dropped]
+        kept = np.asarray(keep, dtype=int).reshape(-1, 3) if keep else faces
+        thinned.append((kind, points, kept, mesh))
     return thinned
 
 
@@ -188,10 +214,7 @@ def write_room(scene, room, place, materials, textures, index, types, output_dir
         faces = np.asarray(mesh["faces"], dtype=int).reshape(-1, 3)
         if not len(xyz) or not len(faces):
             continue
-        if mesh["type"] in FACING_DOWN_ONLY:
-            faces = downward_faces(faces, mesh.get("normal"), len(xyz))
-            if not len(faces):
-                continue
+        faces = facing_the_room_only(mesh["type"], faces, mesh.get("normal"), len(xyz))
         points = to_room(xyz, place)
         surfaces.append((mesh["type"], points, face_the_room(points, faces, centre), mesh))
     for _, points, faces, mesh in thin_coincident_ceilings(surfaces):

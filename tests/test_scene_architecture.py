@@ -26,20 +26,6 @@ def test_the_room_is_placed_by_the_furniture_it_shares(architecture, tmp_path, m
     assert np.allclose(mapped[1], [1.0, -1.0, 1.0])
 
 
-def test_a_dropped_ceiling_keeps_only_what_faces_the_room(architecture):
-    """Its box sides enclose a cavity no light reaches, and render black."""
-    faces = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
-    normals = ([0, -1, 0]*3) + ([0, 1, 0]*3) + ([1, 0, 0]*3)
-    kept = architecture.downward_faces(faces, normals, 9)
-    assert kept.tolist() == [[0, 1, 2]]
-
-
-def test_faces_are_left_alone_when_the_scene_records_no_normals(architecture):
-    faces = np.array([[0, 1, 2]])
-    assert architecture.downward_faces(faces, None, 3).tolist() == faces.tolist()
-    assert architecture.downward_faces(faces, [0, 1], 3).tolist() == faces.tolist()
-
-
 def scene_with(meshes, materials=()):
     return {"mesh": list(meshes), "material": list(materials),
             "scene": {"room": [{"instanceid": "Bedroom-1",
@@ -107,34 +93,48 @@ def test_surfaces_are_wound_to_face_the_room(architecture):
     assert np.cross(corners[1]-corners[0], corners[2]-corners[0])[0] < 0
 
 
-def test_one_ceiling_keeps_each_plane(architecture):
-    """Two ceilings in one plane shadow each other and both come out black."""
-    import numpy as np
-    big = np.array([[-2.0, -2.0, 1.0], [2.0, -2.0, 1.0], [2.0, 2.0, 1.0]])
-    small = np.array([[-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 1.0]])
-    face = np.array([[0, 1, 2]])
+def test_a_ceiling_that_repeats_another_is_dropped(architecture):
+    big = np.array([[-2.0, -2.0, 1.0], [2.0, -2.0, 1.0], [2.0, 2.0, 1.0], [-2.0, 2.0, 1.0]])
+    small = np.array([[-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 1.0], [-1.0, 1.0, 1.0]])
+    quad = np.array([[0, 1, 2], [0, 2, 3]])
     thinned = architecture.thin_coincident_ceilings(
-        [("Ceiling", big, face, {}), ("CustomizedCeiling", small, face, {})])
-    assert len(thinned[0][2]) == 1        # the larger one keeps the plane
-    assert len(thinned[1][2]) == 0
+        [("Ceiling", big, quad, {}), ("CustomizedCeiling", small, quad, {})])
+    assert len(thinned[0][2]) == 2
+    assert len(thinned[1][2]) == 2
 
 
-def test_only_the_faces_sharing_a_plane_are_given_up(architecture):
-    """A dropped ceiling is a box: its rim shares the slab, its panel does not."""
-    import numpy as np
-    slab = np.array([[-2.0, -2.0, 1.0], [2.0, -2.0, 1.0], [2.0, 2.0, 1.0]])
-    box = np.array([[-1.0, -1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 1.0],
-                    [-1.0, -1.0, 0.7], [1.0, -1.0, 0.7], [1.0, 1.0, 0.7]])
-    faces = np.array([[0, 1, 2], [3, 4, 5]])        # rim at the slab, panel below it
+def test_a_ceiling_that_covers_its_own_ground_is_kept(architecture):
+    left = np.array([[-2.0, -2.0, 1.0], [0.0, -2.0, 1.0], [0.0, 2.0, 1.0], [-2.0, 2.0, 1.0]])
+    right = np.array([[0.0, -2.0, 1.0], [2.0, -2.0, 1.0], [2.0, 2.0, 1.0], [0.0, 2.0, 1.0]])
+    quad = np.array([[0, 1, 2], [0, 2, 3]])
     thinned = architecture.thin_coincident_ceilings(
-        [("Ceiling", slab, np.array([[0, 1, 2]]), {}), ("CustomizedCeiling", box, faces, {})])
-    assert thinned[0][2].tolist() == [[0, 1, 2]]
-    assert thinned[1][2].tolist() == [[3, 4, 5]]    # the panel survives, the rim goes
+        [("Ceiling", left, quad, {}), ("CustomizedCeiling", right, quad, {})])
+    assert len(thinned[0][2]) == 2 and len(thinned[1][2]) == 2
 
 
 def test_a_wall_is_never_thinned(architecture):
-    import numpy as np
     wall = np.array([[1.0, -1.0, -1.0], [1.0, 1.0, -1.0], [1.0, 0.0, 1.0]])
     face = np.array([[0, 1, 2]])
-    thinned = architecture.thin_coincident_ceilings([("WallInner", wall, face, {})])
-    assert thinned[0][2].tolist() == face.tolist()
+    same = architecture.thin_coincident_ceilings([("WallInner", wall, face, {})])
+    assert same[0][2].tolist() == face.tolist()
+
+
+def test_the_box_of_a_dropped_ceiling_is_trimmed_to_its_panel(architecture):
+    faces = np.array([[0, 1, 2], [3, 4, 5], [6, 7, 8]])
+    normals = ([0, -1, 0]*3) + ([0, 1, 0]*3) + ([1, 0, 0]*3)
+    kept = architecture.facing_the_room_only("CustomizedCeiling", faces, normals, 9)
+    assert kept.tolist() == [[0, 1, 2]]
+
+
+def test_a_ceiling_whose_normals_all_point_away_is_kept_whole(architecture):
+    faces = np.array([[0, 1, 2], [3, 4, 5]])
+    normals = [0, 1, 0]*6
+    kept = architecture.facing_the_room_only("CustomizedCeiling", faces, normals, 6)
+    assert kept.tolist() == faces.tolist()
+
+
+def test_walls_and_floors_are_not_filtered_by_normals(architecture):
+    faces = np.array([[0, 1, 2]])
+    normals = [0, 1, 0]*3
+    for kind in ("WallInner", "Floor", "Baseboard"):
+        assert architecture.facing_the_room_only(kind, faces, normals, 3).tolist() == faces.tolist()
