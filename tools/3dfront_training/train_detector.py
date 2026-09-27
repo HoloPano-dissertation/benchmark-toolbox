@@ -27,6 +27,12 @@ class Trainer(DefaultTrainer):
         return COCOEvaluator(dataset_name, ("bbox", "segm"), False, output_folder)
 
 
+def decay_milestones(max_iter, fractions=(0.7, 0.9)):
+    milestones = sorted({int(max_iter * fraction) for fraction in fractions})
+    milestones = [step for step in milestones if 0 < step < max_iter]
+    return tuple(milestones[:max(max_iter - 2, 0)])
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("coco_root", type=Path)
@@ -52,14 +58,19 @@ def main() -> None:
     args = parse_args()
     if args.allow_unapproved_smoke and args.max_iter > 20:
         raise ValueError("Unapproved smoke is limited to 20 iterations")
+    if args.max_iter < 2:
+        raise ValueError(
+            "Detectron2 builds a learning rate schedule of at least two phases, "
+            "so a run of one iteration has nothing to schedule")
     require_training_approval(args.coco_root.parent, args.allow_unapproved_smoke)
     classes = experiment_classes(args.coco_root.parent)
     check_gpu(require_detectron=True)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     train_json = args.coco_root / "train.json"
     val_json = args.coco_root / "val.json"
-    register_coco_instances("midi3d_train", {}, str(train_json), "")
-    register_coco_instances("midi3d_val", {}, str(val_json), "")
+    images = str(args.coco_root.parent)
+    register_coco_instances("midi3d_train", {}, str(train_json), images)
+    register_coco_instances("midi3d_val", {}, str(val_json), images)
 
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(args.config))
@@ -71,6 +82,7 @@ def main() -> None:
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = len(classes)
     cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
     cfg.INPUT.FORMAT = "RGB"
+    cfg.INPUT.MASK_FORMAT = "bitmask"
     cfg.INPUT.MIN_SIZE_TRAIN = (512,)
     cfg.INPUT.MAX_SIZE_TRAIN = 1024
     cfg.INPUT.MIN_SIZE_TEST = 512
@@ -78,10 +90,7 @@ def main() -> None:
     cfg.SOLVER.IMS_PER_BATCH = args.batch_size
     cfg.SOLVER.BASE_LR = 1e-4
     cfg.SOLVER.MAX_ITER = args.max_iter
-    cfg.SOLVER.STEPS = (
-        int(args.max_iter * 0.7),
-        int(args.max_iter * 0.9),
-    )
+    cfg.SOLVER.STEPS = decay_milestones(args.max_iter)
     cfg.SOLVER.CHECKPOINT_PERIOD = args.checkpoint_period
     cfg.TEST.EVAL_PERIOD = args.eval_period
     cfg.SEED = args.seed

@@ -115,3 +115,35 @@ def test_an_invisible_object_is_skipped_not_failed(tmp_path):
     status = run(tmp_path)
     assert status["crops"] == {}
     assert status["skipped"]["not_visible"] == 3
+
+
+def run_shard(root, index, count, merge=False):
+    command = [sys.executable, str(DATASET / "_lib" / "export_crops.py"), str(root),
+               "--shard-count", str(count)]
+    command += ["--merge"] if merge else ["--shard-index", str(index)]
+    result = subprocess.run(command, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    return result
+
+
+def test_shards_write_the_same_catalogue_as_one_pass(experiment):
+    root, _ = experiment
+    whole = run(root)
+    expected = json.loads((root / "objects" / "train.json").read_text())
+    for split in ("train", "val", "test"):
+        (root / "objects" / f"{split}.json").unlink()
+    for index in range(2):
+        run_shard(root, index, 2)
+    run_shard(root, 0, 2, merge=True)
+    assert json.loads((root / "state" / "crops.json").read_text()) == whole
+    assert json.loads((root / "objects" / "train.json").read_text()) == expected
+
+
+def test_a_lost_shard_stops_the_catalogue(experiment):
+    root, _ = experiment
+    run_shard(root, 0, 2)
+    result = subprocess.run(
+        [sys.executable, str(DATASET / "_lib" / "export_crops.py"), str(root),
+         "--shard-count", "2", "--merge"], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "Shard 1 of train left no report" in result.stderr

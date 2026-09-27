@@ -47,6 +47,18 @@ def plan_exclusions(rooms, rendered_root, views, reasons, evidence):
             for row in sorted(missing, key=lambda r: r["room_id"])]
 
 
+def name_exclusions(rooms, named, reason, evidence):
+    known = {row["room_id"] for row in rooms}
+    unknown = sorted(set(named) - known)
+    if unknown:
+        raise ValueError(
+            "%d rooms are not in the frozen split, so they cannot be excluded from it: %s"
+            % (len(unknown), ", ".join(unknown[:5])))
+    return [{"room_id": room_id, "house_id": room_id.split("/")[0], "split": "excluded",
+             "reason": reason, "evidence": evidence}
+            for room_id in sorted(set(named))]
+
+
 def apply_to_splits(splits_dir, exclusions):
     splits_dir = Path(splits_dir)
     leaving = {item["room_id"] for item in exclusions}

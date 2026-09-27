@@ -16,6 +16,12 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_root", type=Path)
     parser.add_argument("--views", type=int, default=4)
+    parser.add_argument("--shard-index", type=int, default=0)
+    parser.add_argument("--shard-count", type=int, default=1)
+    parser.add_argument("--images-only", action="store_true",
+                        help="Write the images of this shard and stop: manifests and "
+                             "the readiness report cover the whole set and are built "
+                             "by a single pass once every shard is done")
     return parser.parse_args()
 
 
@@ -26,6 +32,10 @@ def main() -> None:
         json.loads(line) for line in split_manifest.read_text(encoding="utf-8").splitlines()
         if line.strip()
     ]
+    if args.shard_count < 1 or not 0 <= args.shard_index < args.shard_count:
+        raise SystemExit("Invalid shard index/count")
+    if args.shard_count > 1:
+        room_records = room_records[args.shard_index::args.shard_count]
     manifests: dict[str, list[dict[str, object]]] = defaultdict(list)
     complete_rooms = 0
     incomplete_rooms: list[str] = []
@@ -68,9 +78,11 @@ def main() -> None:
         rgb_dir.mkdir(parents=True, exist_ok=True)
         for view, hdf5_path in enumerate(frame_paths):
             rgb_path = rgb_dir / f"{view}.png"
-            if not rgb_path.is_file():
+            if not (rgb_path.is_file() and rgb_path.stat().st_size):
+                staging = rgb_path.parent / (rgb_path.name + ".part")
                 with h5py.File(hdf5_path, "r") as source:
-                    Image.fromarray(source["colors"][...]).save(rgb_path)
+                    Image.fromarray(source["colors"][...]).save(staging, format="PNG")
+                staging.replace(rgb_path)
             manifests[split].append(
                 {
                     "sample_id": f"{room_id}/{view}",
@@ -86,6 +98,12 @@ def main() -> None:
                     },
                 }
             )
+
+    if args.images_only:
+        print(json.dumps({"shard": args.shard_index, "of": args.shard_count,
+                          "rooms": len(room_records), "complete_rooms": complete_rooms,
+                          "incomplete_rooms": len(incomplete_rooms)}, indent=2))
+        return
 
     manifest_dir = args.experiment_root / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)

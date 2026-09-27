@@ -114,8 +114,9 @@ def test_export_writes_the_rolled_frame_it_annotates_in(seam_experiment):
     rolled = [image for image in coco["images"] if image.get("panorama_frame") == 1]
     assert len(rolled) == 1
     rendered = np.asarray(Image.open(seam_experiment / "rgb" / "train" / "0.png"))
-    assert np.array_equal(np.asarray(Image.open(rolled[0]["file_name"])),
-                          np.roll(rendered, WIDTH // 2, axis=1))
+    assert np.array_equal(
+        np.asarray(Image.open(seam_experiment / rolled[0]["file_name"])),
+        np.roll(rendered, WIDTH // 2, axis=1))
 
 
 def test_every_panorama_keeps_its_rendered_frame(tmp_path):

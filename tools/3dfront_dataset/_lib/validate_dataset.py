@@ -97,8 +97,10 @@ def validate_dataset(root):
             frame = image.get("panorama_frame", 0)
             expected_file = rendered if frame == 0 else rendered.with_suffix(
                 ".frame%d.png" % frame)
+            named = Path(image["file_name"])
+            named = named if named.is_absolute() else root / named
             require((image["width"], image["height"]) == dimensions[sample_id]
-                    and Path(image["file_name"]).resolve() == expected_file.resolve()
+                    and named.resolve() == expected_file.resolve()
                     and expected_file.is_file(),
                     "COCO image mismatch")
         annotations = coco["annotations"]

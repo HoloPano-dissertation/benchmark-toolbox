@@ -103,3 +103,18 @@ def test_applying_the_same_plan_twice_changes_nothing_more(reject, tmp_path):
     assert first == second
     policy = json.loads((splits / "excluded_rooms.json").read_text())
     assert len(policy["rooms"]) == 1
+
+
+def test_a_named_room_leaves_the_set_whatever_its_render(reject, tmp_path):
+    rendered_room(tmp_path / "h1" / "Bedroom-1")
+    plan = reject.name_exclusions(rows("h1/Bedroom-1", "h2/Bedroom-2"),
+                                  ["h1/Bedroom-1"], "floor area out of range", "the scale check")
+    assert [item["room_id"] for item in plan] == ["h1/Bedroom-1"]
+    assert plan[0]["split"] == "excluded"
+    assert plan[0]["reason"] == "floor area out of range"
+    assert plan[0]["evidence"] == "the scale check"
+
+
+def test_a_room_the_split_never_had_cannot_be_excluded(reject):
+    with pytest.raises(ValueError, match="h9/Bedroom-9"):
+        reject.name_exclusions(rows("h1/Bedroom-1"), ["h9/Bedroom-9"], "because", "evidence")

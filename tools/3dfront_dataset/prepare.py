@@ -14,6 +14,8 @@ STAGES = ("rgb", "ground_truth", "relations", "shape", "crops", "coco",
           "horizonnet", "dpc")
 
 VIEWS_PER_ROOM = 4
+RENDER_EVIDENCE = ("The panorama renderer could not place the required cameras "
+                   "or finish the views for this room.")
 
 
 def exclusion_policy():
@@ -114,12 +116,15 @@ def main():
     reject = commands.add_parser(
         "reject", help="Move rooms the renderer could not make out of the frozen split")
     reject.add_argument("experiment_root", type=Path)
-    reject.add_argument("--rendered", type=Path, required=True,
+    reject.add_argument("--rendered", type=Path,
                         help="Root of the finished renders, holding <house>/<room>/")
-    reject.add_argument("--reasons", type=Path, required=True,
+    reject.add_argument("--reasons", type=Path,
                         help="JSON object: room id -> what the renderer said about it")
-    reject.add_argument("--evidence", default="The panorama renderer could not place the "
-                        "required cameras or finish the views for this room.")
+    reject.add_argument("--rooms",
+                        help="Exclude exactly the rooms of this list, whatever their render: "
+                             "a JSON array of <house>/<room>, or one id per line")
+    reject.add_argument("--reason", help="Why the rooms of --rooms leave the set")
+    reject.add_argument("--evidence")
     reject.add_argument("--views", type=int, default=VIEWS_PER_ROOM)
     validate = commands.add_parser("validate", help="Validate exported training/evaluation inputs")
     validate.add_argument("experiment_root", type=Path)
@@ -147,9 +152,21 @@ def main():
         return
     root = args.experiment_root.resolve()
     if args.command == "reject":
-        from _lib.reject import apply_to_splits, plan_exclusions, read_reasons
-        exclusions = plan_exclusions(frozen_rooms(), args.rendered, args.views,
-                                     read_reasons(args.reasons), args.evidence)
+        from _lib.reject import (apply_to_splits, name_exclusions, plan_exclusions,
+                                 read_reasons)
+        if args.rooms:
+            if not args.reason:
+                parser.error("--rooms needs --reason: a room leaves the set only with one")
+            from _lib.room_list import read_room_list
+            exclusions = name_exclusions(frozen_rooms(), read_room_list(args.rooms),
+                                         args.reason, args.evidence or args.reason)
+        elif args.rendered and args.reasons:
+            exclusions = plan_exclusions(frozen_rooms(), args.rendered, args.views,
+                                         read_reasons(args.reasons),
+                                         args.evidence or RENDER_EVIDENCE)
+        else:
+            parser.error("reject takes either --rooms with --reason, "
+                         "or --rendered with --reasons")
         if not exclusions:
             print(json.dumps({"excluded_now": 0, "rooms": len(frozen_rooms())}, indent=2))
             return
