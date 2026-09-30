@@ -5,11 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import pickle
+import sys
 from collections import Counter
 from pathlib import Path
 
 import h5py
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scene_layout import manhattan_world, sorted_by_column
 
 from utils.igibson_utils import IGScene
 from utils.relation_utils import RelationOptimization
@@ -37,11 +41,8 @@ def decode(value):
     return json.loads(str(value))
 
 
-def manhattan_world(layout):
-    ring = np.asarray(layout["polygon"]["coordinates"][0], dtype=float)[:-1, :2]
-    floor = np.column_stack((ring, np.full(len(ring), float(layout["floor_z"]))))
-    ceiling = np.column_stack((ring, np.full(len(ring), float(layout["ceiling_z"]))))
-    return np.concatenate((floor, ceiling), axis=0)
+def camera_name(room, view):
+    return "%s__%s" % (room, view)
 
 
 def camera_dict(position):
@@ -101,7 +102,7 @@ def build_scene(record, ground_truth, segmentation, attributes, horizon, classes
         objects.append(entry)
 
     return {
-        "name": view,
+        "name": camera_name(room, view),
         "scene": house,
         "room": room,
         "camera": camera,
@@ -145,8 +146,11 @@ def main() -> None:
                                    attributes, horizon, classes)
                 dropped[split] += len(ground_truth["objects"]) - len(data["objs"])
                 scene = IGScene(data)
-                scene.data["layout"]["manhattan_pix"] = scene.transform.world2campix(
+                pixels, world = sorted_by_column(
+                    scene.transform.world2campix(data["layout"]["manhattan_world"]),
                     data["layout"]["manhattan_world"])
+                scene.data["layout"]["manhattan_pix"] = pixels
+                scene.data["layout"]["manhattan_world"] = world
                 optimiser.generate_relation(scene)
                 target = output / split / data["scene"] / data["room"] / data["name"]
                 target.mkdir(parents=True, exist_ok=True)
